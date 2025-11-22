@@ -4088,7 +4088,1118 @@ spec:
 
 ---
 
-## Backup & Disaster Recovery
+## 12. Deployment Architecture
+
+### Enterprise Kubernetes Deployment Strategy
+
+Comprehensive deployment architecture for production-ready microservices infrastructure with multi-environment support, automated CI/CD pipelines, and infrastructure as code.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                        DEPLOYMENT ARCHITECTURE OVERVIEW                        │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐             │
+│  │   DEVELOPMENT   │    │     STAGING     │    │   PRODUCTION    │             │
+│  │   ENVIRONMENT   │    │   ENVIRONMENT   │    │   ENVIRONMENT   │             │
+│  │                 │    │                 │    │                 │             │
+│  │ ┌─────────────┐ │    │ ┌─────────────┐ │    │ ┌─────────────┐ │             │
+│  │ │Single Node K8│ │    │ │Multi-Node K8│ │    │ │HA Cluster K8│ │             │
+│  │ │             │ │    │ │             │ │    │ │             │ │             │
+│  │ │- 1 Master   │ │    │ │- 3 Masters  │ │    │ │- 3+ Masters │ │             │
+│  │ │- 2 Workers  │ │    │ │- 3 Workers  │ │    │ │- 6+ Workers │ │             │
+│  │ │- Local PVs  │ │    │ │- NFS Storage│ │    │ │- Cloud PVs  │ │             │
+│  │ └─────────────┘ │    │ └─────────────┘ │    │ └─────────────┘ │             │
+│  └─────────────────┘    └─────────────────┘    └─────────────────┘             │
+│           │                       │                       │                    │
+│           └───────────────────────┼───────────────────────┘                    │
+│                                   │                                            │
+│  ┌─────────────────────────────────┼─────────────────────────────────────────┐ │
+│  │                    CI/CD PIPELINE ORCHESTRATION                         │ │
+│  │                                 │                                        │ │
+│  │ ┌─────────────┐ ┌─────────────┐ │ ┌─────────────┐ ┌─────────────────┐   │ │
+│  │ │   GitLab    │ │  Container  │ │ │  ArgoCD /   │ │   Monitoring &  │   │ │
+│  │ │   CI/CD     │ │  Registry   │ │ │  FluxCD     │ │   Observability │   │ │
+│  │ │             │ │             │ │ │             │ │                 │   │ │
+│  │ │- Build      │ │- Docker Hub │ │ │- GitOps     │ │- Prometheus     │   │ │
+│  │ │- Test       │ │- Harbor     │ │ │- Auto Sync  │ │- Grafana        │   │ │
+│  │ │- Security   │ │- Registry   │ │ │- Rollback   │ │- Jaeger         │   │ │
+│  │ │- Deploy     │ │  Security   │ │ │- Canary     │ │- ELK Stack      │   │ │
+│  │ └─────────────┘ └─────────────┘ │ └─────────────┘ └─────────────────┘   │ │
+│  └─────────────────────────────────┼─────────────────────────────────────────┘ │
+└─────────────────────────────────────┼─────────────────────────────────────────┘
+                                     │
+        ┌────────────────────────────┼────────────────────────────┐
+        │              INFRASTRUCTURE AS CODE                     │
+        │                            │                            │
+        │ ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐ │
+        │ │  Terraform  │ │   Ansible   │ │      Helm Charts    │ │
+        │ │             │ │             │ │                     │ │
+        │ │- Cloud Res  │ │- Config Mgmt│ │- App Templates      │ │
+        │ │- Networking │ │- OS Setup   │ │- Version Control    │ │
+        │ │- Security   │ │- Security   │ │- Environment Vars   │ │
+        │ │- Monitoring │ │- Monitoring │ │- Secret Management  │ │
+        │ └─────────────┘ └─────────────┘ └─────────────────────┘ │
+        └─────────────────────────────────────────────────────────┘
+```
+
+### 12.1. Environment Configuration
+
+#### Development Environment
+```yaml
+# dev-cluster-config.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: libertypay-dev
+  labels:
+    environment: development
+    project: libertypay
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: dev-quota
+  namespace: libertypay-dev
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+    persistentvolumeclaims: "10"
+```
+
+#### Staging Environment
+```yaml
+# staging-cluster-config.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: libertypay-staging
+  labels:
+    environment: staging
+    project: libertypay
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: staging-quota
+  namespace: libertypay-staging
+spec:
+  hard:
+    requests.cpu: "8"
+    requests.memory: 16Gi
+    limits.cpu: "16"
+    limits.memory: 32Gi
+    persistentvolumeclaims: "20"
+```
+
+#### Production Environment
+```yaml
+# production-cluster-config.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: libertypay-prod
+  labels:
+    environment: production
+    project: libertypay
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: prod-quota
+  namespace: libertypay-prod
+spec:
+  hard:
+    requests.cpu: "32"
+    requests.memory: 64Gi
+    limits.cpu: "64"
+    limits.memory: 128Gi
+    persistentvolumeclaims: "50"
+---
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: libertypay-psp
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  seLinux:
+    rule: 'RunAsAny'
+  fsGroup:
+    rule: 'RunAsAny'
+```
+
+### 12.2. Container Strategy
+
+#### Multi-Stage Docker Builds
+```dockerfile
+# Dockerfile.microservice-template
+# Build stage
+FROM golang:1.21-alpine AS builder
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd
+
+# Security scan stage
+FROM aquasec/trivy:latest AS security
+COPY --from=builder /app/main /tmp/app
+RUN trivy filesystem /tmp/app
+
+# Final stage
+FROM gcr.io/distroless/static-debian11:nonroot
+
+LABEL org.opencontainers.image.title="LibertyPay Microservice"
+LABEL org.opencontainers.image.description="Production-ready microservice"
+LABEL org.opencontainers.image.vendor="LibertyPay"
+LABEL org.opencontainers.image.version="1.0.0"
+
+WORKDIR /
+COPY --from=builder /app/main .
+COPY --from=builder /app/configs/ ./configs/
+
+USER 65534:65534
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD ["/main", "health"]
+
+ENTRYPOINT ["/main"]
+```
+
+#### Image Security & Optimization
+```yaml
+# image-security-policy.yaml
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-image-signature
+spec:
+  validationFailureAction: enforce
+  background: false
+  rules:
+  - name: check-image-signature
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - libertypay-prod
+    verifyImages:
+    - imageReferences:
+      - "registry.libertypay.com/*"
+      attestors:
+      - count: 1
+        entries:
+        - keys:
+            publicKeys: |-
+              -----BEGIN PUBLIC KEY-----
+              MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE...
+              -----END PUBLIC KEY-----
+```
+
+### 12.3. Helm Chart Structure
+
+#### Chart Organization
+```
+helm-charts/
+├── Chart.yaml
+├── values.yaml
+├── values-dev.yaml
+├── values-staging.yaml
+├── values-prod.yaml
+├── templates/
+│   ├── _helpers.tpl
+│   ├── configmap.yaml
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   ├── ingress.yaml
+│   ├── hpa.yaml
+│   ├── pdb.yaml
+│   ├── networkpolicy.yaml
+│   └── serviceaccount.yaml
+├── charts/
+│   ├── postgresql/
+│   ├── redis/
+│   └── rabbitmq/
+└── crds/
+    └── keycloak-realm.yaml
+```
+
+#### Helm Values Structure
+```yaml
+# values.yaml
+global:
+  imageRegistry: registry.libertypay.com
+  environment: production
+  monitoring:
+    enabled: true
+  security:
+    enforced: true
+
+microservices:
+  employee:
+    enabled: true
+    replicaCount: 3
+    image:
+      repository: libertypay/employee-service
+      tag: "v1.2.0"
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+
+  transaction:
+    enabled: true
+    replicaCount: 5
+    image:
+      repository: libertypay/transaction-service
+      tag: "v1.2.0"
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 1
+        memory: 1Gi
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: "ssd-retain"
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: api.libertypay.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: libertypay-tls
+      hosts:
+        - api.libertypay.com
+
+postgresql:
+  enabled: true
+  architecture: replication
+  auth:
+    username: libertypay
+    database: libertypay_db
+  primary:
+    persistence:
+      enabled: true
+      size: 100Gi
+      storageClass: "ssd-retain"
+  readReplicas:
+    replicaCount: 2
+
+redis:
+  enabled: true
+  architecture: replication
+  auth:
+    enabled: true
+  master:
+    persistence:
+      enabled: true
+      size: 20Gi
+```
+
+### 12.4. CI/CD Pipeline Configuration
+
+#### GitLab CI Pipeline
+```yaml
+# .gitlab-ci.yml
+stages:
+  - validate
+  - build
+  - test
+  - security
+  - package
+  - deploy-dev
+  - deploy-staging
+  - deploy-prod
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  REGISTRY: registry.libertypay.com
+  KUBE_NAMESPACE_DEV: libertypay-dev
+  KUBE_NAMESPACE_STAGING: libertypay-staging
+  KUBE_NAMESPACE_PROD: libertypay-prod
+
+.deploy_template: &deploy_template
+  image: alpine/k8s:1.24.0
+  script:
+    - kubectl config use-context $KUBE_CONTEXT
+    - helm repo update
+    - |
+      helm upgrade --install libertypay-$SERVICE ./helm-charts \
+        --namespace $KUBE_NAMESPACE \
+        --values ./helm-charts/values-$ENVIRONMENT.yaml \
+        --set global.image.tag=$CI_COMMIT_SHA \
+        --set global.environment=$ENVIRONMENT \
+        --wait --timeout=600s
+    - kubectl rollout status deployment/$SERVICE-deployment -n $KUBE_NAMESPACE
+
+validate:
+  stage: validate
+  image: golangci/golangci-lint:v1.54
+  script:
+    - golangci-lint run --timeout 10m
+    - go mod verify
+    - go vet ./...
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+
+build:
+  stage: build
+  image: docker:24-dind
+  services:
+    - docker:24-dind
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build --target security -t $REGISTRY/security-scan:$CI_COMMIT_SHA .
+    - docker build -t $REGISTRY/$SERVICE:$CI_COMMIT_SHA .
+    - docker push $REGISTRY/$SERVICE:$CI_COMMIT_SHA
+  parallel:
+    matrix:
+      - SERVICE: [employee-service, transaction-service, organization-service, 
+                 misc-service, repayment-service, auth-service, api-gateway]
+
+security-scan:
+  stage: security
+  image: aquasec/trivy:latest
+  script:
+    - trivy image --exit-code 1 --severity HIGH,CRITICAL $REGISTRY/$SERVICE:$CI_COMMIT_SHA
+    - trivy fs --exit-code 1 --severity HIGH,CRITICAL .
+  parallel:
+    matrix:
+      - SERVICE: [employee-service, transaction-service, organization-service,
+                 misc-service, repayment-service, auth-service, api-gateway]
+
+deploy-dev:
+  <<: *deploy_template
+  stage: deploy-dev
+  variables:
+    ENVIRONMENT: dev
+    KUBE_CONTEXT: dev-cluster
+    KUBE_NAMESPACE: $KUBE_NAMESPACE_DEV
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+
+deploy-staging:
+  <<: *deploy_template
+  stage: deploy-staging
+  variables:
+    ENVIRONMENT: staging
+    KUBE_CONTEXT: staging-cluster
+    KUBE_NAMESPACE: $KUBE_NAMESPACE_STAGING
+  rules:
+    - if: $CI_COMMIT_BRANCH == "release/*"
+  when: manual
+
+deploy-prod:
+  <<: *deploy_template
+  stage: deploy-prod
+  variables:
+    ENVIRONMENT: prod
+    KUBE_CONTEXT: prod-cluster
+    KUBE_NAMESPACE: $KUBE_NAMESPACE_PROD
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+  when: manual
+  environment:
+    name: production
+    url: https://api.libertypay.com
+```
+
+### 12.5. ArgoCD GitOps Configuration
+
+#### Application Definition
+```yaml
+# argocd/applications/libertypay-prod.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: libertypay-prod
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://git.libertypay.com/platform/libertypay-microservices.git
+    targetRevision: HEAD
+    path: helm-charts
+    helm:
+      valueFiles:
+        - values-prod.yaml
+      parameters:
+        - name: global.environment
+          value: production
+        - name: global.image.tag
+          value: "v1.2.0"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: libertypay-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+```
+
+#### Rollback Strategy
+```yaml
+# argocd/rollback-policy.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: libertypay-project
+  namespace: argocd
+spec:
+  description: LibertyPay Platform Project
+  sourceRepos:
+    - 'https://git.libertypay.com/platform/*'
+  destinations:
+    - namespace: 'libertypay-*'
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+  namespaceResourceBlacklist:
+    - group: ''
+      kind: ResourceQuota
+    - group: ''
+      kind: LimitRange
+  roles:
+    - name: admin
+      description: Full access to libertypay applications
+      policies:
+        - p, proj:libertypay-project:admin, applications, *, libertypay-project/*, allow
+        - p, proj:libertypay-project:admin, repositories, *, *, allow
+      groups:
+        - libertypay:platform-admins
+    - name: developer
+      description: Limited access for developers
+      policies:
+        - p, proj:libertypay-project:developer, applications, get, libertypay-project/*, allow
+        - p, proj:libertypay-project:developer, applications, sync, libertypay-project/*-dev, allow
+      groups:
+        - libertypay:developers
+```
+
+### 12.6. Infrastructure as Code
+
+#### Terraform Configuration
+```hcl
+# terraform/environments/production/main.tf
+terraform {
+  required_version = ">= 1.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.23"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.11"
+    }
+  }
+  
+  backend "s3" {
+    bucket         = "libertypay-terraform-state"
+    key            = "production/terraform.tfstate"
+    region         = "us-west-2"
+    encrypt        = true
+    dynamodb_table = "terraform-state-lock"
+  }
+}
+
+module "eks_cluster" {
+  source = "../../modules/eks"
+  
+  cluster_name    = "libertypay-prod"
+  cluster_version = "1.24"
+  region          = var.aws_region
+  
+  node_groups = {
+    main = {
+      desired_capacity = 6
+      max_capacity     = 20
+      min_capacity     = 3
+      instance_types   = ["m5.xlarge"]
+      
+      k8s_labels = {
+        Environment = "production"
+        Application = "libertypay"
+      }
+    }
+    
+    spot = {
+      desired_capacity = 3
+      max_capacity     = 10
+      min_capacity     = 0
+      instance_types   = ["m5.large", "m5.xlarge", "c5.large"]
+      capacity_type    = "SPOT"
+      
+      k8s_labels = {
+        Environment = "production"
+        Application = "libertypay"
+        NodeType    = "spot"
+      }
+      
+      taints = {
+        spot = {
+          key    = "spot-instance"
+          value  = "true"
+          effect = "NO_SCHEDULE"
+        }
+      }
+    }
+  }
+  
+  tags = {
+    Environment = "production"
+    Project     = "libertypay"
+    Owner       = "platform-team"
+  }
+}
+
+module "rds_cluster" {
+  source = "../../modules/rds"
+  
+  cluster_identifier = "libertypay-prod"
+  engine             = "aurora-postgresql"
+  engine_version     = "13.7"
+  database_name      = "libertypay"
+  
+  master_username = var.db_username
+  master_password = var.db_password
+  
+  instance_count = 3
+  instance_class = "db.r6g.2xlarge"
+  
+  backup_retention_period = 30
+  backup_window          = "03:00-05:00"
+  maintenance_window     = "sun:05:00-sun:07:00"
+  
+  enabled_cloudwatch_logs_exports = ["postgresql"]
+  
+  tags = {
+    Environment = "production"
+    Project     = "libertypay"
+  }
+}
+
+module "elasticache" {
+  source = "../../modules/elasticache"
+  
+  cluster_id           = "libertypay-prod"
+  node_type           = "cache.r6g.xlarge"
+  num_cache_clusters  = 3
+  parameter_group     = "default.redis6.x.cluster.on"
+  
+  subnet_group_name = module.vpc.elasticache_subnet_group
+  security_groups   = [module.security_groups.elasticache_sg]
+  
+  tags = {
+    Environment = "production"
+    Project     = "libertypay"
+  }
+}
+```
+
+#### Ansible Playbooks
+```yaml
+# ansible/site.yml
+---
+- hosts: kubernetes_masters
+  become: yes
+  roles:
+    - common
+    - kubernetes
+    - monitoring
+  vars:
+    k8s_role: master
+
+- hosts: kubernetes_workers
+  become: yes
+  roles:
+    - common
+    - kubernetes
+    - monitoring
+  vars:
+    k8s_role: worker
+
+- hosts: all
+  become: yes
+  tasks:
+    - name: Install security updates
+      package:
+        name: '*'
+        state: latest
+        security_only: yes
+      when: ansible_os_family == "RedHat"
+
+    - name: Configure firewall
+      firewalld:
+        service: "{{ item }}"
+        permanent: yes
+        state: enabled
+      loop:
+        - ssh
+        - http
+        - https
+      notify: reload firewalld
+
+    - name: Setup monitoring agents
+      include_role:
+        name: prometheus_node_exporter
+
+    - name: Configure log forwarding
+      include_role:
+        name: fluentd
+      vars:
+        fluentd_output: elasticsearch
+        elasticsearch_host: "{{ elk_cluster_endpoint }}"
+```
+
+### 12.7. Monitoring & Observability
+
+#### Prometheus Configuration
+```yaml
+# monitoring/prometheus-config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    
+    rule_files:
+      - "/etc/prometheus/rules/*.yml"
+    
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+              - alertmanager:9093
+    
+    scrape_configs:
+      - job_name: 'kubernetes-apiservers'
+        kubernetes_sd_configs:
+        - role: endpoints
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+          action: keep
+          regex: default;kubernetes;https
+      
+      - job_name: 'libertypay-services'
+        kubernetes_sd_configs:
+        - role: endpoints
+          namespaces:
+            names:
+            - libertypay-prod
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+          action: keep
+          regex: true
+        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+          action: replace
+          target_label: __metrics_path__
+          regex: (.+)
+```
+
+#### Alert Rules
+```yaml
+# monitoring/alert-rules.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: libertypay-alerts
+  namespace: monitoring
+spec:
+  groups:
+  - name: libertypay.rules
+    rules:
+    - alert: ServiceDown
+      expr: up{job=~"libertypay-.*"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "LibertyPay service {{ $labels.instance }} is down"
+        description: "{{ $labels.job }} has been down for more than 1 minute."
+    
+    - alert: HighErrorRate
+      expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High error rate on {{ $labels.instance }}"
+        description: "Error rate is {{ $value }} errors per second."
+    
+    - alert: DatabaseConnectionIssues
+      expr: increase(database_connection_errors_total[5m]) > 10
+      for: 2m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Database connection issues detected"
+        description: "{{ $labels.service }} is experiencing database connection problems."
+    
+    - alert: HighMemoryUsage
+      expr: container_memory_usage_bytes / container_spec_memory_limit_bytes > 0.9
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High memory usage on {{ $labels.pod }}"
+        description: "Memory usage is above 90% for more than 10 minutes."
+```
+
+### 12.8. Security & Compliance
+
+#### Network Policies
+```yaml
+# security/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: libertypay-network-policy
+  namespace: libertypay-prod
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: libertypay
+  policyTypes:
+  - Ingress
+  - Egress
+  
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: api-gateway
+    ports:
+    - protocol: TCP
+      port: 8080
+  
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/part-of: libertypay
+    ports:
+    - protocol: TCP
+      port: 8080
+  
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/part-of: libertypay
+    ports:
+    - protocol: TCP
+      port: 8080
+  
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: postgresql
+    ports:
+    - protocol: TCP
+      port: 5432
+  
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+```
+
+#### Pod Security Standards
+```yaml
+# security/pod-security-standards.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: libertypay-prod
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-non-root-user
+spec:
+  validationFailureAction: enforce
+  background: true
+  rules:
+  - name: check-non-root
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - libertypay-prod
+    validate:
+      message: "Containers must run as non-root user"
+      pattern:
+        spec:
+          securityContext:
+            runAsNonRoot: true
+          containers:
+          - name: "*"
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: ">0"
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - ALL
+```
+
+### 12.9. Disaster Recovery Procedures
+
+#### Automated Backup Strategy
+```yaml
+# backup/velero-backup-schedule.yaml
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: libertypay-daily-backup
+  namespace: velero
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  template:
+    includedNamespaces:
+    - libertypay-prod
+    - monitoring
+    - ingress-nginx
+    excludedResources:
+    - secrets
+    - configmaps
+    storageLocation: default
+    volumeSnapshotLocations:
+    - default
+    ttl: 720h0m0s  # 30 days
+    hooks:
+      resources:
+      - name: postgres-backup-hook
+        pre:
+        - exec:
+            container: postgres
+            command:
+            - /bin/bash
+            - -c
+            - "pg_dump libertypay > /tmp/backup.sql"
+        post:
+        - exec:
+            container: postgres
+            command:
+            - /bin/bash
+            - -c
+            - "rm -f /tmp/backup.sql"
+```
+
+#### Recovery Procedures
+```bash
+#!/bin/bash
+# scripts/disaster-recovery.sh
+
+set -euo pipefail
+
+BACKUP_NAME="${1:-latest}"
+NAMESPACE="${2:-libertypay-prod}"
+
+echo "Starting disaster recovery for namespace: $NAMESPACE"
+
+# 1. Stop all services gracefully
+kubectl scale deployment --all --replicas=0 -n $NAMESPACE
+
+# 2. Restore from Velero backup
+velero restore create --from-backup $BACKUP_NAME --wait
+
+# 3. Verify data integrity
+kubectl exec -n $NAMESPACE deployment/postgresql-master -- \
+  psql -U postgres -d libertypay -c "SELECT COUNT(*) FROM employees;"
+
+# 4. Restart services with rolling update
+kubectl rollout restart deployment -n $NAMESPACE
+
+# 5. Verify service health
+kubectl wait --for=condition=available --timeout=600s deployment --all -n $NAMESPACE
+
+# 6. Run smoke tests
+kubectl apply -f tests/smoke-tests.yaml
+kubectl wait --for=condition=complete --timeout=300s job/smoke-tests -n $NAMESPACE
+
+echo "Disaster recovery completed successfully"
+```
+
+### 12.10. Scaling Strategies
+
+#### Horizontal Pod Autoscaler
+```yaml
+# scaling/hpa-configuration.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: transaction-service-hpa
+  namespace: libertypay-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: transaction-service
+  minReplicas: 3
+  maxReplicas: 50
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Pods
+    pods:
+      metric:
+        name: http_requests_per_second
+      target:
+        type: AverageValue
+        averageValue: "100"
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 4
+        periodSeconds: 15
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+      selectPolicy: Min
+```
+
+#### Vertical Pod Autoscaler
+```yaml
+# scaling/vpa-configuration.yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: employee-service-vpa
+  namespace: libertypay-prod
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: employee-service
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: employee-service
+      minAllowed:
+        cpu: 100m
+        memory: 128Mi
+      maxAllowed:
+        cpu: 2
+        memory: 2Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+```
+
+---
+
+## 13. Backup & Disaster Recovery
 
 ### Comprehensive Data Protection Strategy
 

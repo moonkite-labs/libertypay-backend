@@ -1,0 +1,3014 @@
+{
+	"info": {
+		"_postman_id": "dbb46d20-882f-408c-8925-a07613941390",
+		"name": "Abhi Open API (UAE)",
+		"description": "# Introduction\n\nAbhi offers a set of APIs to 3rd parties for the purpose of integration to render EWA services to the external platform.\n\n3rd parties system shall integrate Abhi API(s) in its platform to offer the frontend application to its end users. The users will essentially log in to the 3rd party system & the 3rd party system in turn will call Abhi API(s) to render its services.\n\nAs part of the one-time onboarding, Abhi team set up the root organization for 3rd parties. This will allow the 3rd party system to create employees under the root organization. Moreover, additional organizations can be created under the root organizations, allowing 3rd party system to create employees under each orgnaization seperately. Users or employees of one organization can not access detail of other organization, however admin shall be able to access all child organizaiton details.\n\n# Response Codes\n\n## Response Structure\n\nAll API responses follow this standard format:\n\n``` json\n{\n  \"statusCode\": 200,\n  \"message\": \"Success message\",\n  \"data\": {}\n}\n\n ```\n\n## HTTP Response Codes\n\n### Success Responses (2xx)\n\n- **200 OK** - Request successful\n    \n- **201 CREATED** - Resource created successfully\n    \n- **202 ACCEPTED** - Request accepted for processing\n    \n\n### Client Error Responses (4xx)\n\n- **400 BAD_REQUEST** - Invalid request data or validation errors\n    \n- **401 UNAUTHORIZED** - Authentication failed or missing\n    \n- **403 FORBIDDEN** - Access denied or insufficient permissions\n    \n- **404 NOT_FOUND** - Resource not found\n    \n- **406 NOT_ACCEPTABLE** - Request not acceptable or policy violations\n    \n- **409 CONFLICT** - Resource conflict or duplicate entries\n    \n- **422 UNPROCESSABLE_ENTITY** - Data format or validation errors\n    \n- **429 TOO_MANY_REQUESTS** - Rate limit exceeded\n    \n\n### Server Error Responses (5xx)\n\n- **500 INTERNAL_SERVER_ERROR** - Unexpected server error\n    \n- **502 BAD_GATEWAY** - Gateway or upstream service error\n    \n- **503 SERVICE_UNAVAILABLE** - Service temporarily unavailable\n    \n- **504 GATEWAY_TIMEOUT** - Request timeout\n    \n\n## Error Handling Recommendations\n\n**For 4xx errors:** Review request data and fix client-side issues  \n**For 5xx errors:** Implement retry logic with exponential backoff  \n**For 401 errors:** Refresh authentication and retry  \n**For 429 errors:** Implement rate limiting and retry after delay\n\n# Authentication\n\nUpon successful login, Abhi authenciation system shall generate a JWT token with 24 hours validity. All subsequent API calls must include the provided JWT token in the header to prove the identity and Abhi shall provide the relevant data in response to the APIs.\n\nNOTES:\n\n1. By default, multi login is not allowed, therefore in case if a user is already logged in with a valid JWT token, the next successful attempt will invalid earlier token.\n    \n2. Five consective wrong attempts will lock the user login.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "24396773"
+	},
+	"item": [
+		{
+			"name": "Employee",
+			"item": [
+				{
+					"name": "Get All Employees",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"",
+									"pm.test(\"Response status code is 200\", function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"",
+									"pm.test(\"Data object structure is as expected\", function () {",
+									"  const responseData = pm.response.json();",
+									"",
+									"  pm.expect(responseData.data).to.exist.and.to.be.an('object');",
+									"  pm.expect(responseData.data.total).to.exist.and.to.be.a('number');",
+									"  pm.expect(responseData.data.results).to.exist.and.to.be.an('array');",
+									"});",
+									"",
+									"",
+									"pm.test(\"Results array is present and contains at least one element\", function () {",
+									"    const responseData = pm.response.json();",
+									"    ",
+									"    pm.expect(responseData).to.have.property('data');",
+									"    pm.expect(responseData.data).to.have.property('results').that.is.an('array').and.not.empty;",
+									"});",
+									"",
+									"",
+									"",
+									"",
+									"// pm.test script",
+									"pm.test('Emirates ID with specific value should exist in the response data', function () {",
+									"    // Parse the response body as JSON",
+									"    var responseData = pm.response.json();",
+									"",
+									"    // Extract the \"results\" array from the response data",
+									"    var resultsArray = responseData.data.results;",
+									"",
+									"    // Assert: Check if there is at least one object in the \"results\" array with the specified emiratesId",
+									"    pm.expect(resultsArray.some(result => result.person && result.person.emiratesId === '98700065126543')).to.be.false;",
+									"});",
+									"",
+									"",
+									"",
+									"pm.test('ID with specific value should exist in the response data', function () {",
+									"    // Parse the response body as JSON",
+									"    var responseData = pm.response.json();",
+									"",
+									"    // Extract the \"results\" array from the response data",
+									"    var resultsArray = responseData.data.results;",
+									"",
+									"    // Assert: Check if there is at least one object in the \"results\" array with the specified ID",
+									"    pm.expect(resultsArray.some(result => result.id === 'd2d1020a-1969-4d67-9b82-7170177e20c1')).to.be.true;",
+									"});",
+									"",
+									"",
+									"",
+									"",
+									"",
+									"",
+									"",
+									"// pm.test script",
+									"",
+									"",
+									"",
+									"",
+									"// pm.test script",
+									"pm.test('Account Number 1231221312312 should exist for Emirates ID 098700065126543', function () {",
+									"    // Parse the response body as JSON",
+									"    var responseData = pm.response.json();",
+									"",
+									"    // Extract the \"results\" array from the response data",
+									"    var resultsArray = responseData.data.results;",
+									"",
+									"    // Find the object with the specified emiratesId",
+									"    var resultObject = resultsArray.find(result => result.person.emiratesId === '098700065126543');",
+									"",
+									"    // Assert: Check if the accountNumber is '1231221312312' for the specified emiratesId",
+									"    pm.expect(resultObject && resultObject.selectedBankAccount && resultObject.selectedBankAccount.accountNumber === '1231221312312').to.be.true;",
+									"});",
+									"",
+									"",
+									"// pm.test script",
+									"pm.test('Email rahul4983458788775@gmail.com should exist for Emirates ID 098700065126543', function () {",
+									"    // Parse the response body as JSON",
+									"    var responseData = pm.response.json();",
+									"",
+									"    // Extract the \"results\" array from the response data",
+									"    var resultsArray = responseData.data.results;",
+									"",
+									"    // Find the object with the specified emiratesId",
+									"    var resultObject = resultsArray.find(result => result.person.emiratesId === '098700065126543');",
+									"",
+									"    // Assert: Check if the email is 'rahul4983458788775@gmail.com' for the specified emiratesId",
+									"    pm.expect(resultObject && resultObject.officialEmail && resultObject.officialEmail.email === 'rahul4983458788775@gmail.com').to.be.true;",
+									"});",
+									"",
+									"",
+									"",
+									"",
+									"",
+									"",
+									"",
+									"",
+									"",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImE1ODcyYmVlLWJjMjMtNGE0Yi05N2E1LTBkZTkyNmE2Yzk5YSIsImluaXRpYXRvciI6ImV4dGVybmFsX3NvdXJjZSIsImFsbG93TXVsdGlsb2dpbiI6ZmFsc2UsImZpbmdlcnByaW50IjoiY2QzMGY3NmNjMzU2MDJlNDFiMjBjYzcwNWU1ZjJmOTEiLCJpYXQiOjE3MDY2MDc1NTIsImV4cCI6MTcwNjY5Mzk1MiwiYXVkIjoiYWJoaS5hZSIsImlzcyI6IkFiaGkgUHZ0LiBMdGQuIiwic3ViIjoiYTU4NzJiZWUtYmMyMy00YTRiLTk3YTUtMGRlOTI2YTZjOTlhIn0.IgTK093NiPV1gL8vhGC6k5g4T30WImay8j8sc0LFMiTa_RVFE4VBF7_Lo8r8MEGQ_XkzOsHQZpKROpJ4PsvMgcCzehY3wBwYtSyY4qHBS4O-EDzbT_ut1rNemkGUOXqyx-2fIu3GfP2tmi89x8qqydmRWAqoGBTZuUEzp4kitq9sQIrm5rnBKlji7jFPNGMbQmvfk16gmuTUtZzIOr6Ztq4yLvnL0xlyCmLjStLeE1a99wDCee7i7fxg5QLCav7uC2Ia2x1YL6hORY9YmH7CYHudbGpI-A1sHoLmibGcBrCZ1g7u26T5VyTQNHpz68X4DLrqLSp938k9urtoZUMZig",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}open-api/employees?page=1&limit=10",
+							"host": [
+								"{{url}}open-api"
+							],
+							"path": [
+								"employees"
+							],
+							"query": [
+								{
+									"key": "dateOfJoiningFrom",
+									"value": "2010-01-10T10:10:59.409Z",
+									"disabled": true
+								},
+								{
+									"key": "dateOfJoiningTo",
+									"value": "2015-12-31T10:10:59.409Z",
+									"disabled": true
+								},
+								{
+									"key": "email",
+									"value": "johndoe@hotmail.com",
+									"disabled": true
+								},
+								{
+									"key": "phone",
+									"value": "+971501234567",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "firstName",
+									"value": "John",
+									"disabled": true
+								},
+								{
+									"key": "lastName",
+									"value": "Doe",
+									"disabled": true
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "emiratesId",
+									"value": "098700065126543",
+									"disabled": true
+								}
+							]
+						},
+						"description": "## API Overview\n\n• Endpoint: `GET /employees`  \n• HTTP Method: GET  \n• Authentication: Bearer Token required  \n• Content-Type: `application/json`  \n• Parameter Location: Query String Parameters  \n• Purpose: Retrieve all employees for the authenticated user's organization with filtering and pagination support\n\n## Parameter Location\n\n• **Where accepted:** Query String Parameters\n\n## Request Structure\n\n• **Parameters:** All parameters are optional with system defaults  \n• **Filtering:** Supports multiple filter criteria including dates, personal details, bank information  \n• **Pagination:** Supports limit and page parameters for result pagination  \n• **Date handling:** Supports various date range filters\n\n```\nGET /employees?limit=50&page=1&cnic=1234567890123&department=Engineering\n\n ```\n\n## Optional Fields\n\n### limit (number)\n\n• **Required:** No  \n• **Purpose:** Number of employees to return per page  \n• **Format:** Positive integer  \n• **Validation:** Must be between 1 and 250  \n• **Default:** 10\n\n### page (number)\n\n• **Required:** No  \n• **Purpose:** Page number for pagination  \n• **Format:** Positive integer  \n• **Validation:** Must be 1 or greater  \n• **Default:** 1\n\n### emiratesId (string)\n\n• **Required:** No  \n• **Purpose:** Filter by employee Emirates ID  \n• **Format:** String value  \n• **Alias:** Can also use `emiratesId` parameter\n\n### firstName (string)\n\n• **Required:** No  \n• **Purpose:** Filter by employee first name  \n• **Format:** String value\n\n### lastName (string)\n\n• **Required:** No  \n• **Purpose:** Filter by employee last name  \n• **Format:** String value\n\n### name (string)\n\n• **Required:** No  \n• **Purpose:** Filter by employee full name  \n• **Format:** String value\n\n### email (string)\n\n• **Required:** No  \n• **Purpose:** Filter by employee email address  \n• **Format:** Valid email format  \n• **Validation:** Must be valid email format\n\n### phone (string)\n\n• **Required:** No  \n• **Purpose:** Filter by employee phone number  \n• **Format:** String value\n\n### employeeCode (string)\n\n• **Required:** No  \n• **Purpose:** Filter by employee code  \n• **Format:** String value\n\n### department (string)\n\n• **Required:** No  \n• **Purpose:** Filter by employee department  \n• **Format:** String value\n\n### designation (string)\n\n• **Required:** No  \n• **Purpose:** Filter by employee designation/job title  \n• **Format:** String value\n\n### gender (string)\n\n• **Required:** No  \n• **Purpose:** Filter by employee gender  \n• **Format:** Enum value  \n• **Valid values:** male, female, not specified\n\n### from (date)\n\n• **Required:** No  \n• **Purpose:** Start date for employee creation filter  \n• **Format:** Date string (ISO format)  \n• **Processing:** Automatically set to start of day\n\n### to (date)\n\n• **Required:** No  \n• **Purpose:** End date for employee creation filter  \n• **Format:** Date string (ISO format)  \n• **Processing:** Automatically set to end of day\n\n### dateOfJoiningFrom (date)\n\n• **Required:** No  \n• **Purpose:** Start date for joining date filter  \n• **Format:** Date string (ISO format)  \n• **Processing:** Automatically set to start of day\n\n### dateOfJoiningTo (date)\n\n• **Required:** No  \n• **Purpose:** End date for joining date filter  \n• **Format:** Date string (ISO format)  \n• **Processing:** Automatically set to end of day\n\n### dateOfBirthFrom (date)\n\n• **Required:** No  \n• **Purpose:** Start date for birth date filter  \n• **Format:** Date string (ISO format)  \n• **Processing:** Automatically set to start of day\n\n### dateOfBirthTo (date)\n\n• **Required:** No  \n• **Purpose:** End date for birth date filter  \n• **Format:** Date string (ISO format)  \n• **Processing:** Automatically set to end of day\n\n### enabled (boolean)\n\n• **Required:** No  \n• **Purpose:** Filter by user account enabled status  \n• **Format:** Boolean value (true/false)\n\n### isApproved (boolean)\n\n• **Required:** No  \n• **Purpose:** Filter by employee approval status  \n• **Format:** Boolean value (true/false)\n\n### deletedUsers (boolean)\n\n• **Required:** No  \n• **Purpose:** Include deleted employees in results  \n• **Format:** Boolean value (true/false)  \n• **Default:** true\n\n### verified (boolean)\n\n• **Required:** No  \n• **Purpose:** Filter by employee verification status  \n• **Format:** Boolean value (true/false)\n\n## Response Structures\n\n### Success Response with Employees (HTTP 200)\n\n``` json\n{\n  \"total\": 25,\n  \"results\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"createdAt\": \"2024-01-15T10:30:00Z\",\n      \"deletedDate\": null,\n      \"employeeCode\": \"EMP001\",\n      \"dateOfJoining\": \"2024-01-10\",\n      \"organizationId\": \"org-uuid-123\",\n      \"netSalary\": 50000,\n      \"updatedAt\": \"2024-01-15T10:30:00Z\",\n      \"person\": {\n        \"firstName\": \"Ahmed\",\n        \"lastName\": \"Ali\",\n        \"emiratesId\": \"1234567890123\",\n        \"dob\": \"1990-05-15\",\n        \"user\": {\n          \"enabled\": true,\n          \"username\": \"ahmed.ali@company.com\"\n        }\n      },\n      \"selectedBankAccount\": {\n        \"accountTitle\": \"Ahmed Ali\",\n        \"accountNumber\": \"1234567890123456\",\n        \"bank\": {\n          \"bankName\": \"Emirates NBD\"\n        }\n      },\n      \"officialEmail\": {\n        \"email\": \"ahmed.ali@company.com\"\n      },\n      \"officialPhone\": {\n        \"phoneNo\": \"+971501234567\"\n      },\n      \"organization\": {\n        \"name\": \"Tech Solutions LLC\"\n      },\n      \"limit\": 50\n    }\n  ]\n}\n\n ```\n\n### Success Response with No Employees (HTTP 200)\n\n``` json\n{\n  \"total\": 0,\n  \"results\": []\n}\n\n ```\n\n## Error Responses\n\n### Validation Errors\n\n#### Invalid Email Format (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Email must be a valid email address\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://api-uat-v2.abhi.ae/uat-open-api/employees?page=1&limit=10",
+									"protocol": "https",
+									"host": [
+										"api-uat-v2",
+										"abhi",
+										"ae"
+									],
+									"path": [
+										"uat-open-api",
+										"employees"
+									],
+									"query": [
+										{
+											"key": "dateOfJoiningFrom",
+											"value": "2010-01-10T10:10:59.409Z",
+											"disabled": true
+										},
+										{
+											"key": "dateOfJoiningTo",
+											"value": "2015-12-31T10:10:59.409Z",
+											"disabled": true
+										},
+										{
+											"key": "email",
+											"value": "Alexandrea_Green3@hotmail.com",
+											"disabled": true
+										},
+										{
+											"key": "phone",
+											"value": "846-779-0237",
+											"disabled": true
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "firstName",
+											"value": "test",
+											"disabled": true
+										},
+										{
+											"key": "lastName",
+											"value": "Testing by",
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "emiratesId",
+											"value": "101234567891234",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Wed, 08 Mar 2023 12:48:55 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "718"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "x-amzn-RequestId",
+									"value": "a7e5656b-f720-49e6-841a-38cdbad36487"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "gzip"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=63072000; includeSubdomains; preload"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "content-security-policy",
+									"value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'"
+								},
+								{
+									"key": "x-amz-apigw-id",
+									"value": "BdmYDHNLjoEFesg="
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-Amzn-Trace-Id",
+									"value": "Root=1-64088433-0b87fe4d2e949e29298ff1a8"
+								},
+								{
+									"key": "Access-Control-Allow-Credentials",
+									"value": "true"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": {\n        \"total\": 1,\n        \"results\": [\n            {\n                \"id\": \"39e542ee-ae52-4a57-af31-d97b4b02178c\",\n                \"createdAt\": \"2023-03-08T11:46:03.196Z\",\n                \"deletedDate\": null,\n                \"employeeCode\": null,\n                \"dateOfJoining\": \"2023-03-06T00:00:00.000Z\",\n                \"organizationId\": \"df35ced3-42a8-4e29-9f03-998772892dff\",\n                \"netSalary\": \"500000\",\n                \"updatedAt\": \"2023-03-08T11:51:37.339Z\",\n                \"person\": {\n                    \"firstName\": \"John\",\n                    \"lastName\": \"Doe\",\n                    \"emiratesId\": \"101234567891234\",\n                    \"dob\": \"1970-01-01\",\n                    \"user\": {\n                        \"enabled\": true,\n                        \"username\": \"john.doe@gmail.com\"\n                    }\n                },\n                \"selectedBankAccount\": {\n                    \"accountTitle\": \"John Doe\",\n                    \"accountNumber\": \"1231221312312\",\n                    \"bank\": {\n                        \"bankName\": \"Silk Bank\"\n                    }\n                },\n                \"officialEmail\": {\n                    \"email\": \"john.doe@gmail.com\"\n                },\n                \"organization\": {\n                    \"name\": \"Acme\"\n                },\n                \"limit\": 50\n            }\n        ]\n    },\n    \"message\": \"Success\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+						}
+					]
+				},
+				{
+					"name": "Add Employee",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var requestBody = JSON.parse(pm.request.body.raw).employees[0]",
+									"",
+									"",
+									"pm.test('Response is an object with message property', function () {",
+									"    pm.expect(pm.response.json()).to.be.an('object').that.has.property('message');",
+									"});",
+									"",
+									"",
+									"// Check all required fields should not null ",
+									"pm.test('Verify that required fields are not empty', () => {",
+									"    pm.expect(requestBody.firstName).to.not.eq(\"\")",
+									"        pm.expect(requestBody.lastName).to.not.eq(\"\")",
+									"        pm.expect(requestBody.department).to.not.eq(\"\")",
+									"        pm.expect(requestBody.designation).to.not.eq(\"\")",
+									"        pm.expect(requestBody.email).to.not.eq(\"\")",
+									"        pm.expect(requestBody.dob).to.not.eq(\"\")",
+									"        pm.expect(requestBody.dateOfJoining).to.not.eq(\"\")",
+									"        pm.expect(requestBody.emiratesId).to.not.eq(\"\")",
+									"        pm.expect(requestBody.bankId).to.not.eq(\"\")",
+									"",
+									"        // Verify Email format ",
+									"    pm.expect(requestBody.email).to.match(/^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$/)",
+									"//  Verify dateOfJoining format ",
+									"    pm.expect(requestBody.dateOfJoining).to.match(/^\\d{4}-\\d{2}-\\d{2}/);",
+									"    //  Verify date of birth format ",
+									"    pm.expect(requestBody.dob).to.match(/^\\d{4}-\\d{2}-\\d{2}/);",
+									"    // Verify Bank Id format",
+									"    pm.expect(requestBody.bankId).to.match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/);",
+									"",
+									"",
+									"",
+									"",
+									"",
+									"// Verify response body if all required fielda are valid",
+									"    var allFieldsValid = true; ",
+									"     if (allFieldsValid) {",
+									"        pm.expect(pm.response.code).to.equal(200);",
+									"    } ",
+									"",
+									"",
+									"})",
+									"",
+									"",
+									"pm.test('Date of joining in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.dateOfJoining).to.not.be.null;",
+									"});",
+									"",
+									"pm.test('Account title in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.accountTitle).to.not.be.null;",
+									"});",
+									"",
+									"pm.test('Account number in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.accountNumber).to.not.be.null;",
+									"});",
+									"",
+									"pm.test('netSalary in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.netSalary).to.not.be.null;",
+									"});",
+									"",
+									"pm.test('EmiratesId in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.emiratesId).to.not.be.null;",
+									"});",
+									"",
+									"pm.test('bankId in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.bankId).to.not.be.null;",
+									"});",
+									"",
+									"pm.test('Email in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.email).to.not.be.null;",
+									"});",
+									"",
+									"pm.test('Phone in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.phone).to.not.be.null;",
+									"});",
+									"",
+									"pm.test('First name in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.firstName).to.not.be.null;",
+									"});",
+									"",
+									"pm.test('Last name in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.lastName).to.not.be.null;",
+									"});",
+									"",
+									"",
+									"",
+									"// var email = JSON.parse(pm.request.body.raw);",
+									"// console.log((email.employees[0].email)(/^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$/))",
+									"",
+									"// pm.test(\"Check in request post body username should be in this format ogramuat-ops@abhi.ae\", function () {",
+									"//     var username = JSON.parse(pm.request.body.raw).username;",
+									"//     pm.expect(username).to.match(/^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$/);",
+									"// });",
+									"",
+									"",
+									"",
+									"",
+									"  ",
+									"",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImE1ODcyYmVlLWJjMjMtNGE0Yi05N2E1LTBkZTkyNmE2Yzk5YSIsImluaXRpYXRvciI6ImV4dGVybmFsX3NvdXJjZSIsImFsbG93TXVsdGlsb2dpbiI6ZmFsc2UsImZpbmdlcnByaW50IjoiY2QzMGY3NmNjMzU2MDJlNDFiMjBjYzcwNWU1ZjJmOTEiLCJpYXQiOjE3MDY2MDE5NzEsImV4cCI6MTcwNjY4ODM3MSwiYXVkIjoiYWJoaS5hZSIsImlzcyI6IkFiaGkgUHZ0LiBMdGQuIiwic3ViIjoiYTU4NzJiZWUtYmMyMy00YTRiLTk3YTUtMGRlOTI2YTZjOTlhIn0.IJMBVczTppuynteoulJ1ZWmvwrwyBYXyUWsiw-3ZwXBTu2g6IG0AyR98cu-aOnkLVDku-skRSUOheqCG0AUoZbvGC7sqiJWgk-W3JS5HFeiSMvVloBRjiUsd9mIxWApKmDphOEo3ek2AAwEEZqevz2Nm2xYpAwhQ3DlwHh7kCAL-g-ytQe7-2BXZk-Ex0dXr7m_ZqyIAiTG2mabAkY6B7lIB2WPH3x-45vOTPiyaaX4q2-xu9TOy-O3ag9zBIqEMoFwqyGJ1gqLGN3L-tZ_IkYhgI5hrI-z-3hcFwGrqKEM52YMYWZDUJSb1VwuMBeWxo7OuTGw_rJrMN7A6Jrp3Lw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"employees\": [\n        {\n            \"employeeCode\": \"khan0065132\",\n            \"firstName\": \"khan001333652\",\n            \"lastName\": \"osama03301\",\n            \"department\": \"tech\",\n            \"designation\": \"QA engineer\",\n            \"phone\": \"+971526765490\",\n            \"email\": \"khan7336357766@abhi.com\",\n            \"dob\": \"1970-01-01\",\n            \"dateOfJoining\": \"2024-01-01\",\n            \"accountTitle\": \"Jazz Cash\",\n            \"accountNumber\": \"87908765435\",\n            \"netSalary\": \"5000\",\n            \"emiratesId\": \"098872287676543\",\n            \"gender\": \"Male\",\n            \"bankId\": \"9b5fcf65-5fca-4acf-a3a5-6f79055644e1\",\n            \"payrollStartDay\": 1\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}open-api/employees",
+							"host": [
+								"{{url}}open-api"
+							],
+							"path": [
+								"employees"
+							]
+						},
+						"description": "## API Overview\n\n• Endpoint: `POST /employees`  \n• HTTP Method: POST  \n• Authentication: Bearer Token required  \n• Content-Type: `application/json`  \n• Parameter Location: Request Body (JSON)  \n• Purpose: Create new employees for your organization\n\n## Parameter Location\n\n• **Where accepted:** Request Body as JSON\n\n## Request Structure\n\n• **Root object:** JSON with employees array  \n• **Array requirement:** Between 1 and 5 employees per request  \n• **Employee validation:** Each employee object validated individually\n\n``` json\n{\n  \"employees\": [\n    {\n      \"emiratesId\": \"1234567890123\",\n      \"bankId\": \"000e8400-e29b-41d4-a716-446655440000\",\n      \"firstName\": \"John\",\n      \"lastName\": \"Doe\",\n      \"email\": \"john.doe@company.com\",\n      \"phone\": \"+971501234567\",\n      \"netSalary\": \"50000\"\n    }\n  ]\n}\n\n ```\n\n## Required Fields\n\n### employees (array)\n\n• **Required:** Yes  \n• **Purpose:** Array of employee objects to create  \n• **Format:** Array of employee objects  \n• **Validation:** Must contain 1-5 employees\n\n### emiratesId (string)\n\n• **Required:** Yes  \n• **Purpose:** National Emirates ID number  \n• **Format:** Country-specific format  \n• **Validation:** Must be unique and match country format  \n• **UAE:** 15 digits\n\n### bankId (string)\n\n• **Required:** Yes  \n• **Purpose:** Bank identifier for employee's bank account  \n• **Format:** Valid UUID  \n• **Validation:** Must exist in banks system\n\n### email (string)\n\n• **Required:** No  \n• **Purpose:** Employee's email address  \n• **Format:** Valid email format  \n• **Validation:** Must be unique across system  \n• **Max Length:** 320 characters\n\n### phone (string)\n\n• **Required:** No  \n• **Purpose:** Employee's phone number  \n• **Format:** Country-specific format with country code  \n• **Validation:** Must be unique and match country pattern  \n• **Max Length:** 16 characters\n\n> **Note:- email / Phone one of the feild is required.** \n  \n\n## All the following Fields are required for transaction / Optional for add employee\n\n### firstName (string)\n\n• **Required:** Yes  \n• **Purpose:** Employee's first name  \n• **Format:** String value  \n• **Max Length:** 94 characters\n\n**Note** :- (Required for transaction, Optional for add employee)\n\n### netSalary (string )\n\n• **Required:** No  \n• **Purpose:** Employee's monthly salary  \n• **Format:** Numeric string  \n• **Validation:** Must not exceed system salary limits.\n\n### accountTitle (string)\n\n• **Required:** No  \n• **Purpose:** Bank account holder name  \n• **Format:** String value  \n• **Max Length:** 128 characters\n\n### accountNumber (string)\n\n• **Required:** No  \n• **Purpose:** Bank account number  \n• **Format:** String value  \n• **Max Length:** 32 characters\n\n## Optional Fields\n\n### lastName (string)\n\n• **Required:** Yes  \n• **Purpose:** Employee's last name  \n• **Format:** String value  \n• **Max Length:** 94 characters\n\n### department (string)\n\n• **Required:** No  \n• **Purpose:** Employee's department  \n• **Format:** String value  \n• **Auto-creation:** Creates new department if doesn't exist  \n• **Max Length:** 94 characters\n\n### designation (string)\n\n• **Required:** No  \n• **Purpose:** Employee's job title/designation  \n• **Format:** String value  \n• **Auto-creation:** Creates new designation if doesn't exist  \n• **Max Length:** 128 characters\n\n### accountBank (string)\n\n• **Required:** No  \n• **Purpose:** Bank name  \n• **Format:** String value  \n• **Auto-set:** Automatically set from bankId\n\n### providentFund (number)\n\n• **Required:** No  \n• **Purpose:** Provident fund contribution amount  \n• **Format:** Numeric value\n\n### salaryCap (number)\n\n• **Required:** No  \n• **Purpose:** Maximum salary cap for employee  \n• **Format:** Numeric value  \n• **Default:** Set to netSalary if not provided\n\n### dob (string)\n\n• **Required:** No  \n• **Purpose:** Date of birth  \n• **Format:** Date string\n\n### gender (string)\n\n• **Required:** No  \n• **Purpose:** Employee gender  \n• **Format:** Enum value  \n• **Valid values:** male, female, not specified\n\n### dateOfJoining (string)\n\n• **Required:** No  \n• **Purpose:** Employee joining date  \n• **Format:** Date string  \n• **Default:** Current date\n\n### employeeCode (string)\n\n• **Required:** No  \n• **Purpose:** Unique employee identifier  \n• **Format:** String value\n\n### payrollStartDay (number)\n\n• **Required:** No  \n• **Purpose:** Payroll Start Day for employee  \n• **Format:** Numeric value  \n• **Default:** null, System will use Organization Payroll Start Day for balance calculations\n\n## Response Structures\n\n### Success Response (HTTP 200)\n\n``` json\n{\n  \"status\": \"success\",\n  \"message\": \"Success\",\n  \"data\": [\"emp_12345\", \"emp_12346\"]\n}\n\n ```\n\n## Error Responses\n\n### Validation Errors\n\n#### Too Many Employees (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Maximum 5 employees allowed per request\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```\n\n#### No Employees Provided (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"No employee provided\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"employees\": [\n        {\n            \"employeeCode\": \"\",\n            \"firstName\": \"John\",\n            \"lastName\": \"Doe\",\n            \"department\": \"tech\",\n            \"designation\": \"software engineer\",\n            \"phone\": \"\",\n            \"email\": \"john.doe@gmail.com\",\n            \"dob\": \"1970-01-01\",\n            \"dateOfJoining\": \"2023-03-06\",\n            \"accountTitle\": \"John Doe\",\n            \"accountNumber\": \"1231871512312\",\n            \"netSalary\": \"500000\",\n            \"emiratesId\": \"101234567891234\",\n            \"gender\": \"Male\",\n            \"bankId\": \"1694afcf-832a-4837-993f-42b426c8b1ee\",\n            \"payrollStartDay\": 1\n        }\n    ]\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://api-uat-v2.abhi.ae/uat-open-api/employees",
+									"protocol": "https",
+									"host": [
+										"api-uat-v2",
+										"abhi",
+										"ae"
+									],
+									"path": [
+										"uat-open-api",
+										"employees"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Wed, 08 Mar 2023 14:08:20 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "61"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "x-amzn-RequestId",
+									"value": "41d59239-60b2-4292-898b-7db626ed3e16"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=63072000; includeSubdomains; preload"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "content-security-policy",
+									"value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'"
+								},
+								{
+									"key": "x-amz-apigw-id",
+									"value": "Bdx_2HKYjoEFrmA="
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-Amzn-Trace-Id",
+									"value": "Root=1-640896cb-2d5d3f6a04b79fba2b74aa7f"
+								},
+								{
+									"key": "Access-Control-Allow-Credentials",
+									"value": "true"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": [\n        \"1713ee6e-8789-443a-ac9c-b1cf874d168e\"\n    ],\n    \"message\": \"Success\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+						}
+					]
+				},
+				{
+					"name": "Update Employees",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var requestBody = JSON.parse(pm.request.body.raw).employees[0]",
+									"",
+									"",
+									"",
+									"//  Check all required fields should not null ",
+									"pm.test('Verify that required fields are not empty', () => {",
+									"    pm.expect(requestBody.firstName).to.not.eq(\"\")",
+									"        pm.expect(requestBody.lastName).to.not.eq(\"\")",
+									"        pm.expect(requestBody.department).to.not.eq(\"\")",
+									"        pm.expect(requestBody.designation).to.not.eq(\"\")",
+									"        pm.expect(requestBody.email).to.not.eq(\"\")",
+									"        pm.expect(requestBody.dob).to.not.eq(\"\")",
+									"",
+									"     // Verify Email format ",
+									"    pm.expect(requestBody.email).to.match(/^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$/)",
+									"    //  Verify dateOfJoining format ",
+									"    pm.expect(requestBody.dateOfJoining).to.match(/^\\d{4}-\\d{2}-\\d{2}/);",
+									"    //  Verify date of birth format ",
+									"    pm.expect(requestBody.dob).to.match(/^\\d{4}-\\d{2}-\\d{2}/);",
+									"    // Verify Bank Id format",
+									"    pm.expect(requestBody.bankId).to.match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/);",
+									"",
+									"",
+									"})",
+									"",
+									"",
+									"",
+									"pm.test('Date of joining in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.dateOfJoining).to.not.be.null;",
+									"});",
+									"",
+									"pm.test('Account title in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.accountTitle).to.not.be.null;",
+									"});",
+									"",
+									"pm.test('Account number in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.accountNumber).to.not.be.null;",
+									"});",
+									"",
+									"pm.test('netSalary in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.netSalary).to.not.be.null;",
+									"});",
+									"",
+									"pm.test('EmiratesId in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.emiratesId).to.not.be.null;",
+									"});",
+									"",
+									"pm.test('bankId in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.bankId).to.not.be.null;",
+									"});",
+									"",
+									"pm.test('Email in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.email).to.not.be.null;",
+									"});",
+									"",
+									"pm.test('Phone in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.phone).to.not.be.null;",
+									"});",
+									"",
+									"pm.test('First name in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.firstName).to.not.be.null;",
+									"});",
+									"",
+									"pm.test('Last name in the request post body should not be null value', function () {",
+									"    var requestData = pm.request.body;",
+									"    pm.expect(requestData.lastName).to.not.be.null;",
+									"});",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImE1ODcyYmVlLWJjMjMtNGE0Yi05N2E1LTBkZTkyNmE2Yzk5YSIsImluaXRpYXRvciI6ImV4dGVybmFsX3NvdXJjZSIsImFsbG93TXVsdGlsb2dpbiI6ZmFsc2UsImZpbmdlcnByaW50IjoiY2QzMGY3NmNjMzU2MDJlNDFiMjBjYzcwNWU1ZjJmOTEiLCJpYXQiOjE3MDY2MDc1NTIsImV4cCI6MTcwNjY5Mzk1MiwiYXVkIjoiYWJoaS5hZSIsImlzcyI6IkFiaGkgUHZ0LiBMdGQuIiwic3ViIjoiYTU4NzJiZWUtYmMyMy00YTRiLTk3YTUtMGRlOTI2YTZjOTlhIn0.IgTK093NiPV1gL8vhGC6k5g4T30WImay8j8sc0LFMiTa_RVFE4VBF7_Lo8r8MEGQ_XkzOsHQZpKROpJ4PsvMgcCzehY3wBwYtSyY4qHBS4O-EDzbT_ut1rNemkGUOXqyx-2fIu3GfP2tmi89x8qqydmRWAqoGBTZuUEzp4kitq9sQIrm5rnBKlji7jFPNGMbQmvfk16gmuTUtZzIOr6Ztq4yLvnL0xlyCmLjStLeE1a99wDCee7i7fxg5QLCav7uC2Ia2x1YL6hORY9YmH7CYHudbGpI-A1sHoLmibGcBrCZ1g7u26T5VyTQNHpz68X4DLrqLSp938k9urtoZUMZig",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"employees\": [\n        {\n            \"id\": \"d2d1020a-1969-4d67-9b82-7170177e20c1\",\n            \"employeeCode\": \"njlnjkhjhk\",\n            \"firstName\": \"test 3\",\n            \"lastName\": \"processed_ok\",\n            \"department\": \"tech\",\n            \"designation\": \"software engineer\",\n            \"phone\": \"\",\n            \"email\": \"rahul4983458788775@gmail.com\",\n            \"dob\": \"1970-01-01\",\n            \"dateOfJoining\": \"2024-01-01\",\n            \"accountTitle\": \"PROCESSED_OK\",\n            \"accountNumber\": \"1231221312312\",\n            \"netSalary\": \"15000\",\n            \"emiratesId\": \"098700065126543\",\n            \"gender\": \"male\",\n            \"bankId\": \"a5a172e4-8f9e-4fe1-a65e-1f846a8f68b6\",\n            \"payrollStartDay\": 1\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}open-api/employees",
+							"host": [
+								"{{url}}open-api"
+							],
+							"path": [
+								"employees"
+							]
+						},
+						"description": "## API Overview\n\n• Endpoint: `PUT /employees`  \n• HTTP Method: PUT  \n• Authentication: Bearer Token required  \n• Content-Type: `application/json`  \n• Parameter Location: Request Body (JSON)  \n• Purpose: Update existing employees in your organization\n\n## Parameter Location\n\n• **Where accepted:** Request Body as JSON\n\n## Request Structure\n\n• **Root object:** JSON with `employees` array  \n• **Employee requirement:** At least one employee with valid ID\n\n``` json\n{\n  \"employees\": [\n    { /* employee update data */ }\n  ]\n}\n\n ```\n\n## Required Fields\n\n### id (string)\n\n• **Required:** Yes  \n• **Purpose:** Identifies which employee to update  \n• **Must exist:** Employee ID must be valid and exist in your organization\n\n#### emiratesId (string)\n\n• **Required:** No  \n• **Max length:** 13 characters (Pakistan)  \n• **Format:** Country-specific national ID formats  \n• **Uniqueness:** Must be unique across all persons  \n• **Validation:** Country-specific format validation\n\n### Bank Account Information\n\n#### bankId (string)\n\n• **Required:** No  \n• **Purpose:** Update employee's bank association  \n• **Alternative:** Can use `bankId` field instead  \n• **Validation:** Must reference a valid bank in the system\n\n#### bankName (string)\n\n• **Required:** No  \n• **Purpose:** Bank name for account updates  \n• **Validation:** Must match existing bank name\n\n#### accountTitle (string)\n\n• **Required:** No  \n• **Max length:** 128 characters  \n• **Purpose:** Account holder name  \n• **Validation:** Cannot be empty if account is approved\n\n#### accountNumber (string)\n\n• **Required:** No  \n• **Max length:** 32 characters  \n• **Purpose:** Bank account number  \n• **Validation:** No specific format validation\n\n#### firstName (string)\n\n• **Required:** No  \n• **Max length:** 94 characters  \n• **Validation:** No specific validation\n\n#### lastName (string)\n\n• **Required:** No  \n• **Max length:** 94 characters  \n• **Validation:** No specific validation\n\n#### netSalary (string/number)\n\n• **Required:** No  \n• **Format:** Numeric value (can be string or number)  \n• **Validation:** Must not exceed system-configured salary limits  \n• **Error:** Returns error if salary exceeds allowed limits\n\n## At Least One of the field is required\n\n#### email (string)\n\n• **Required:** No  \n• **Max length:** 320 characters  \n• **Format:** Valid email format required  \n• **Uniqueness:** Must be unique across all employees  \n• **Case handling:** Automatically converted to lowercase  \n• **Empty string:** Removes existing email if empty string provided  \n• **Validation:** Standard email format validation  \n• **Error:** Returns error if invalid format or already exists\n\n#### phone (string)\n\n• **Required:** No  \n• **Max length:** 16 characters  \n• **Format:** Country-specific phone number formats required  \n• **Supported formats:**  \n• UAE: `+971-X-XXXXXXXX` format  \n• **Uniqueness:** Must be unique across all employees  \n• **Empty string:** Removes existing phone if empty string provided  \n• **Important:** Cannot remove both email and phone simultaneously  \n• **Impact:** Phone changes may require admin re-approval\n\n## Optional Fields\n\n### Personal Information\n\n#### dob (string/Date)\n\n• **Required:** No  \n• **Format:** Date format (ISO 8601 recommended)  \n• **Validation:** Valid date format required\n\n#### gender (string)\n\n• **Required:** No  \n• **Allowed values:** `male`, `female`, `not specified`  \n• **Validation:** Must match one of the allowed values\n\n### Job Information\n\n#### department (string)\n\n• **Required:** No  \n• **Max length:** 94 characters  \n• **Auto-creation:** Creates new department if it doesn't exist  \n• **Update condition:** Only updates if different from current value\n\n#### designation (string)\n\n• **Required:** No  \n• **Max length:** 128 characters  \n• **Auto-creation:** Creates new designation if it doesn't exist  \n• **Update condition:** Only updates if different from current value\n\n#### employeeCode (string)\n\n• **Required:** No  \n• **Max length:** 16 characters  \n• **Validation:** Whitespace is automatically trimmed  \n• **Update condition:** Only updates if different after trimming\n\n#### dateOfJoining (Date/string)\n\n• **Required:** No  \n• **Format:** Date format (ISO 8601 recommended)  \n• **Update condition:** Only updates if date is different from existing  \n• **Validation:** Valid date format required\n\n### Financial Information\n\n#### salaryCap (number)\n\n• **Required:** No  \n• **Format:** Numeric value  \n• **Default behavior:** Uses netSalary value if salaryCap is 0 or not provided\n\n#### providentFund (number)\n\n• **Required:** No  \n• **Format:** Numeric value  \n• **Validation:** No specific validation\n\n### payrollStartDay (number)\n\n• **Required:** No  \n• **Purpose:** Payroll Start Day for employee  \n• **Format:** Numeric value (1-31) or null to use the organization's payrollStartDay  \n• **Default:** null, System will use Organization Payroll Start Day for balance calculations  \n• **Example:** 1\n\n## Response Structures\n\n### Success Responses\n\n#### Complete Success (HTTP 200)\n\n``` json\n{\n  \"data\": {\n    \"editStatus\": \"Update process complete\",\n    \"updatedEmployees\": [\"emp_12345\", \"emp_12346\"],\n    \"notUpdatedEmployees\": []\n  },\n  \"message\": \"Update process complete\",\n  \"status\": \"OK\",\n  \"code\": 200\n}\n\n ```\n\n#### Partial Success (HTTP 200)\n\n``` json\n{\n  \"data\": {\n    \"editStatus\": \"Update process complete\",\n    \"updatedEmployees\": [\"emp_12345\"],\n    \"notUpdatedEmployees\": [\n      {\n        \"employeeId\": \"emp_12346\",\n        \"reason\": \"Pending payments in Direct Debit\"\n      },\n      {\n        \"employeeId\": \"emp_12347\",\n        \"reason\": \"Salary limit exceeded\"\n      }\n    ]\n  },\n  \"message\": \"Update process complete\",\n  \"status\": \"OK\",\n  \"code\": 200\n}\n\n ```\n\n### Error Responses\n\n#### Invalid Email Format (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Invalid email format\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"employees\": [\n        {\n            \"employeeCode\": \"\",\n            \"firstName\": \"John\",\n            \"lastName\": \"Doe\",\n            \"department\": \"tech\",\n            \"designation\": \"software engineer\",\n            \"phone\": \"\",\n            \"email\": \"john.doe@gmail.com\",\n            \"dob\": \"1970-01-01\",\n            \"dateOfJoining\": \"2023-03-06\",\n            \"accountTitle\": \"John Doe\",\n            \"accountNumber\": \"1231871512312\",\n            \"netSalary\": \"500000\",\n            \"emiratesId\": \"101234567891234\",\n            \"gender\": \"Male\",\n            \"bankId\": \"1694afcf-832a-4837-993f-42b426c8b1ee\",\n            \"payrollStartDay\": 1\n        }\n    ]\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://api-uat-v2.abhi.ae/uat-open-api/employees",
+									"protocol": "https",
+									"host": [
+										"api-uat-v2",
+										"abhi",
+										"ae"
+									],
+									"path": [
+										"uat-open-api",
+										"employees"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Wed, 08 Mar 2023 12:56:33 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "562"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "x-amzn-RequestId",
+									"value": "94e85cc6-4741-4a2b-9c9a-51036d62acab"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=63072000; includeSubdomains; preload"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "content-security-policy",
+									"value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'"
+								},
+								{
+									"key": "x-amz-apigw-id",
+									"value": "BdnfXF_ujoEF0Cw="
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-Amzn-Trace-Id",
+									"value": "Root=1-640885fb-06a2313c091a349b2e49416e"
+								},
+								{
+									"key": "Access-Control-Allow-Credentials",
+									"value": "true"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": {\n        \"editStatus\": \"All employees are updated Successfully!\"\n    },\n    \"message\": \"Success\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+						}
+					]
+				},
+				{
+					"name": "Delete Employee",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"emiratesIdArray\": [\"101234533550000\"]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}open-api/employees",
+							"host": [
+								"{{url}}open-api"
+							],
+							"path": [
+								"employees"
+							]
+						},
+						"description": "## API Overview\n\n• Endpoint: `DELETE /employees`  \n• HTTP Method: DELETE  \n• Authentication: Bearer Token required  \n• Content-Type: `application/json`  \n• Parameter Location: Request Body (JSON)  \n• Purpose: Delete existing employees from your organization\n\n## Parameter Location\n\n• **Where accepted:** Request Body as JSON\n\n## Request Structure\n\n• **Root object:** JSON with employee identifiers array  \n• **Array requirement:** At least one employee identifier required  \n• **Array validation:** Must be a valid array format\n\n``` json\n{\n  \"emiratesIdArray\": [\"cnic1\", \"cnic2\", \"cnic3\"]\n}\n\n ```\n\n## Required Fields\n\n### emiratesIdArray (array of strings)\n\n• **Required:** Yes  \n• **Purpose:** Array of employee Emirates ID numbers to delete  \n• **Format:** Array of strings  \n• **Validation:** Must be non-empty array  \n• **Element format:** Each element should be a valid Emirates ID\n\n## Response Structures\n\n### Success Responses\n\n#### Complete Success - All Deleted (HTTP 200)\n\n``` json\n{\n  \"data\": {\n    \"updated\": true,\n    \"message\": \"Employee deletion process completed.\",\n    \"deletedEmployees\": [\"emp_12345\", \"emp_12346\"],\n    \"nonDeletedEmployees\": [],\n    \"emiratesIdsFailed\": []\n  },\n  \"message\": \"Employees deleted successfully\",\n  \"status\": \"OK\",\n  \"code\": 200\n}\n\n ```\n\n#### Partial Success - Some Deleted (HTTP 200)\n\n``` json\n{\n  \"data\": {\n    \"updated\": true,\n    \"message\": \"Employee deletion process completed.\",\n    \"deletedEmployees\": [\"emp_12345\"],\n    \"nonDeletedEmployees\": [\"emp_12346\"],\n    \"emiratesIdsFailed\": [\"1234567890999\"]\n  },\n  \"message\": \"Employees deleted successfully\",\n  \"status\": \"OK\",\n  \"code\": 200\n}\n\n ```\n\n#### No Deletions - All Blocked (HTTP 200)\n\n``` json\n{\n  \"data\": {\n    \"updated\": false,\n    \"message\": \"No employees were deleted due to pending direct debit transactions.\",\n    \"deletedEmployees\": [],\n    \"nonDeletedEmployees\": [\"emp_12345\", \"emp_12346\"],\n    \"emiratesIdsFailed\": []\n  },\n  \"message\": \"Employees deleted successfully\",\n  \"status\": \"OK\",\n  \"code\": 200\n}\n\n ```\n### Error Responses\n\n#### Empty Array (HTTP 400)\n\n```json\n{\n  \"data\": {},\n  \"message\": \"emiratesIdArray must be a non-empty array\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n```"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"emiratesIdArray\": [\"101234567891234\"]\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://api-dev11.abhi.com.pk/open-api/employees",
+									"protocol": "https",
+									"host": [
+										"api-dev11",
+										"abhi",
+										"com",
+										"pk"
+									],
+									"path": [
+										"open-api",
+										"employees"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Wed, 08 Mar 2023 14:09:07 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "560"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "x-amzn-RequestId",
+									"value": "fbf30158-56c7-4fee-becd-45364c346341"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=63072000; includeSubdomains; preload"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "content-security-policy",
+									"value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'"
+								},
+								{
+									"key": "x-amz-apigw-id",
+									"value": "BdyH7HfzjoEFpoA="
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-Amzn-Trace-Id",
+									"value": "Root=1-640896ff-7ce24fb15d66313f24909f90"
+								},
+								{
+									"key": "Access-Control-Allow-Credentials",
+									"value": "true"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": {\n        \"updated\": true,\n        \"emiratesIdsFailed\": []\n    },\n    \"message\": \"Employes Deleted Successfully\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+						}
+					]
+				}
+			],
+			"description": "#### API reference for Employee endpoints"
+		},
+		{
+			"name": "Transactions",
+			"item": [
+				{
+					"name": "Employee",
+					"item": [
+						{
+							"name": "Post Transaction",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"amount\": 1500,\n    \"id\": \"714b5d04-d7ee-461a-ae23-9b869f20c5f3\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}open-api/transaction/employee/post-transaction",
+									"host": [
+										"{{url}}open-api"
+									],
+									"path": [
+										"transaction",
+										"employee",
+										"post-transaction"
+									]
+								},
+								"description": "## API Overview\n\n• Endpoint: `POST /transaction/employee/post-transaction`  \n• HTTP Method: POST  \n• Authentication: Bearer Token required  \n• Content-Type: `application/json`  \n• Parameter Location: Request Body (JSON)  \n• Purpose: Create a new transaction request for an employee using existing transaction ID\n\n## Parameter Location\n\n• **Where accepted:** Request Body as JSON\n\n## Request Structure\n\n• **Root object:** JSON with transaction details  \n• **Amount requirement:** Must be a positive number  \n• **Transaction ID requirement:** Must be a valid UUID format\n\n``` json\n{\n  \"amount\": 2500.75,\n  \"id\": \"550e8400-e29b-41d4-a716-446655440000\"\n}\n\n ```\n\n## Required Fields\n\n### amount (number)\n\n• **Required:** Yes  \n• **Purpose:** Transaction amount to be processed  \n• **Format:** Positive decimal number  \n• **Validation:** Must be greater than 0\n\n### id (string)\n\n• **Required:** Yes  \n• **Purpose:** Transaction ID referencing an existing transaction  \n• **Format:** Valid UUID (e.g., \"550e8400-e29b-41d4-a716-446655440000\")  \n• **Validation:** Must match UUID format pattern\n\n## Response Structures\n\n### Success Response (HTTP 200)\n\n``` json\n{\n  \"message\": \"Transaction Request has been registered\",\n  \"data\": {\n    \"transactionId\": \"660f9500-f39c-52e5-b827-556766550111\",\n    \"requestStatus\": \"in progress\"\n  }\n}\n\n ```\n\n### Transaction Status Values\n\n#### Processing Status\n\n• **in progress:** Transaction is being processed  \n• **queued:** Transaction queued for processing  \n• **pending_approval:** Manual approval required before processing\n\n#### Completion Status\n\n• **completed:** Transaction successfully completed  \n• **failed:** Transaction processing failed  \n• **declined:** Transaction declined by system or bank  \n• **rejected:** Transaction manually rejected by approver\n\n## Error Responses\n\n### Validation Errors\n\n#### Missing Amount (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Amount is required and must be a number\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```"
+							},
+							"response": [
+								{
+									"name": "Failure",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"amount\": 550\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "https://api-uat-v2.abhi.ae/uat-open-api/transaction/employee/post-transaction",
+											"protocol": "https",
+											"host": [
+												"api-uat-v2",
+												"abhi",
+												"ae"
+											],
+											"path": [
+												"uat-open-api",
+												"transaction",
+												"employee",
+												"post-transaction"
+											]
+										}
+									},
+									"status": "Bad Request",
+									"code": 400,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Date",
+											"value": "Thu, 09 Mar 2023 04:48:29 GMT"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Length",
+											"value": "576"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "x-amzn-RequestId",
+											"value": "49763909-8a29-4186-a927-94fd3cc35de7"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "x-xss-protection",
+											"value": "1; mode=block"
+										},
+										{
+											"key": "strict-transport-security",
+											"value": "max-age=63072000; includeSubdomains; preload"
+										},
+										{
+											"key": "x-frame-options",
+											"value": "DENY"
+										},
+										{
+											"key": "content-security-policy",
+											"value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'"
+										},
+										{
+											"key": "x-amz-apigw-id",
+											"value": "Bfy7yG2QDoEFQ6Q="
+										},
+										{
+											"key": "x-content-type-options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-Amzn-Trace-Id",
+											"value": "Root=1-64096517-38d1b76c038e86fc5af3cf04"
+										},
+										{
+											"key": "Access-Control-Allow-Credentials",
+											"value": "true"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {},\n    \"message\": \"Your account details are not approved. Please contact your HR.\",\n    \"status\": \"bad request\",\n    \"code\": 400\n}"
+								},
+								{
+									"name": "Success",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"amount\": 1000,\n    \"id\": \"714b5d04-d7ee-461a-ae23-9b869f20c5f3\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}open-api/transaction/employee/post-transaction",
+											"host": [
+												"{{url}}open-api"
+											],
+											"path": [
+												"transaction",
+												"employee",
+												"post-transaction"
+											]
+										}
+									},
+									"_postman_previewlanguage": "Text",
+									"header": null,
+									"cookie": [],
+									"body": "{\n    \"data\": {\n        \"transactionId\": \"714b5d04-d7ee-461a-ae23-9b869f20c5f3\",\n        \"status\": \"complete\",\n        \"disbursementAmount\": 1000,\n        \"serviceFee\": 100,\n        \"vat\": 5,\n        \"requestedAmount\": 1000\n    },\n    \"message\": \"Transaction Request has been registered\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Employee Transaction History",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{url}}open-api/transaction/employee/history/?limit=1&page=1",
+									"host": [
+										"{{url}}open-api"
+									],
+									"path": [
+										"transaction",
+										"employee",
+										"history",
+										""
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "1"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "status",
+											"value": "complete",
+											"disabled": true
+										},
+										{
+											"key": "amount",
+											"value": "500",
+											"disabled": true
+										},
+										{
+											"key": "from",
+											"value": "2020-01-01T00%3A00%3A00,B05%3A00",
+											"disabled": true
+										},
+										{
+											"key": "to",
+											"value": "2023-03-07T23%3A59%3A59,B05%3A00",
+											"disabled": true
+										}
+									]
+								},
+								"description": "## API Overview\n\n• Endpoint: `POST /transaction/employee/history`  \n• HTTP Method: POST  \n• Authentication: Bearer Token required  \n• Content-Type: `application/json`  \n• Parameter Location: Query String Parameters  \n• Purpose: Retrieve transaction history for the authenticated employee\n\n## Parameter Location\n\n• **Where accepted:** Query String Parameters\n\n## Request Structure\n\n• **Parameters:** All parameters are optional with system defaults  \n• **Date filtering:** Supports date range filtering with from/to parameters  \n• **Pagination:** Supports limit and page parameters for result pagination  \n• **Status filtering:** Filter transactions by status\n\n```\nPOST /transaction/employee/history?limit=50&page=1&status=complete&from=2024-01-01&to=2024-12-31\n\n ```\n\n## Optional Fields\n\n### limit (number)\n\n• **Required:** No  \n• **Purpose:** Number of transactions to return per page  \n• **Format:** Positive integer  \n• **Validation:** Must be between 1 and 250  \n• **Default:** System default limit (typically 10)\n\n### page (number)\n\n• **Required:** No  \n• **Purpose:** Page number for pagination  \n• **Format:** Positive integer  \n• **Validation:** Must be 1 or greater  \n• **Default:** 1\n\n### from (date)\n\n• **Required:** No  \n• **Purpose:** Start date for transaction history filter  \n• **Format:** Date string (ISO format or standard date format)  \n• **Default:** Beginning of time (1970-01-01)  \n• **Processing:** Automatically set to start of day\n\n### to (date)\n\n• **Required:** No  \n• **Purpose:** End date for transaction history filter  \n• **Format:** Date string (ISO format or standard date format)  \n• **Default:** Current date  \n• **Processing:** Automatically set to end of day\n\n### status (string)\n\n• **Required:** No  \n• **Purpose:** Filter transactions by status  \n• **Format:** Comma-separated status values  \n• **Default:** \"complete\"  \n• **Valid values:** complete, failed, in progress, pending_approval, declined, rejected, queued\n\n## Error Responses\n\n### Validation Errors\n\n#### Invalid Limit Range (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Limit must be between 1 and 250\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```\n\n#### Invalid Page Number (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Page must be 1 or greater\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```"
+							},
+							"response": [
+								{
+									"name": "Get Employee Transaction History",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "https://api-uat-v2.abhi.ae/uat-open-api/transaction/employee/history/?limit=10&page=1",
+											"protocol": "https",
+											"host": [
+												"api-uat-v2",
+												"abhi",
+												"ae"
+											],
+											"path": [
+												"uat-open-api",
+												"transaction",
+												"employee",
+												"history",
+												""
+											],
+											"query": [
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "status",
+													"value": "complete",
+													"disabled": true
+												},
+												{
+													"key": "amount",
+													"value": "500",
+													"disabled": true
+												},
+												{
+													"key": "from",
+													"value": "2020-01-01T00%3A00%3A00,B05%3A00",
+													"disabled": true
+												},
+												{
+													"key": "to",
+													"value": "2023-03-07T23%3A59%3A59,B05%3A00",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Date",
+											"value": "Wed, 08 Mar 2023 14:12:12 GMT"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Length",
+											"value": "1010"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "x-amzn-RequestId",
+											"value": "9ea53d57-05bb-4fe2-b8c7-d04472fd8888"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "x-xss-protection",
+											"value": "1; mode=block"
+										},
+										{
+											"key": "strict-transport-security",
+											"value": "max-age=63072000; includeSubdomains; preload"
+										},
+										{
+											"key": "x-frame-options",
+											"value": "DENY"
+										},
+										{
+											"key": "content-security-policy",
+											"value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'"
+										},
+										{
+											"key": "x-amz-apigw-id",
+											"value": "Bdyk_HyXDoEFUVA="
+										},
+										{
+											"key": "x-content-type-options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-Amzn-Trace-Id",
+											"value": "Root=1-640897b9-1a9687365a2f14356986ce5e"
+										},
+										{
+											"key": "Access-Control-Allow-Credentials",
+											"value": "true"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {\n        \"totalAmount\": 0,\n        \"transactions\": {\n            \"08-03-2023\": [\n                {\n                    \"id\": \"760ab263-2297-461c-8e22-940b5c7bdf5a\",\n                    \"amount\": \"500\",\n                    \"fee\": \"90\",\n                    \"transactionStatus\": \"error\",\n                    \"transactionDate\": \"2023-03-08T12:02:42.508Z\",\n                    \"errorMessage\": \"GatewayCriticalError: from: titleFetch | STAN: 070684| ResponseDetail: PROCESSED OK\",\n                    \"accountToNumber\": \"1231221312312\",\n                    \"accountToTitle\": \"John Doe\",\n                    \"accountToBank\": \"Silk Bank\",\n                    \"stan\": null,\n                    \"accountNumber\": \"1231221312312\",\n                    \"accountName\": \"PROCESSED_OK\"\n                }\n            ]\n        }\n    },\n    \"message\": \"Success\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Monthly Balance",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{url}}open-api/transaction/employee/balance",
+									"host": [
+										"{{url}}open-api"
+									],
+									"path": [
+										"transaction",
+										"employee",
+										"balance"
+									]
+								},
+								"description": "## API Overview\n\n• Endpoint: `GET /transaction/employee/balance`  \n• HTTP Method: GET  \n• Authentication: Bearer Token required  \n• Content-Type: `application/json`  \n• Parameter Location: No parameters required  \n• Purpose: Retrieve monthly balance breakdown and transaction summary for the authenticated employee\n\n## Parameter Location\n\n• **Where accepted:** No parameters required (authentication only)\n\n## Request Structure\n\n• **Authentication only:** No request body or query parameters needed  \n• **User identification:** Employee identified through Bearer token  \n• **Automatic processing:** System automatically calculates current month data\n\n```\nGET /transaction/employee/balance\n\n ```\n\n## Required Fields\n\n### Authentication\n\n• **Bearer Token:** Required in Authorization header  \n• **Format:** `Authorization: Bearer`  \n• **Validation:** Token must be valid and correspond to existing employee\n\n## Response Structures\n\n### Success Response (HTTP 200)\n\n``` json\n{\n  \"message\": \"Success\",\n  \"data\": {\n    \"salary\": 50000.00,\n    \"availableSalary\": 35000.00,\n    \"availableBalance\": 32000.00,\n    \"totalWithdraw\": 18000.00,\n    \"perDayAvailableSalary\": 1666.67,\n    \"totalDaysOfMonth\": 30,\n    \"monthlyBreakup\": [\n      {\n        \"date\": \"01-01-2024\",\n        \"day\": 1,\n        \"withdrawMoney\": 1500.00,\n        \"totalWithdraw\": 1500.00,\n        \"balance\": 1666.67\n      },\n      {\n        \"date\": \"02-01-2024\",\n        \"day\": 2,\n        \"withdrawMoney\": 0.00,\n        \"totalWithdraw\": 1500.00,\n        \"balance\": 3333.34\n      },\n      {\n        \"date\": \"03-01-2024\",\n        \"day\": 3,\n        \"withdrawMoney\": 2500.00,\n        \"totalWithdraw\": 4000.00,\n        \"balance\": 5000.01\n      }\n    ],\n    \"leaves\": [\n      {\n        \"date\": \"2024-01-15\",\n        \"type\": \"sick_leave\",\n        \"status\": \"approved\"\n      }\n    ]\n  }\n}\n\n ```\n\n## Error Responses\n\n#### Employee Not Found (HTTP 400)\n\n```json\n{\n  \"data\": {},\n  \"message\": \"Employee not found\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n```\n\nThe response will include\n\n- salary: This is the net salary amount provided at the time of creating the employee (or edit at later stage)\n    \n- avilableSalary: This is the risk adjusted salary that act as the benchmark to compute the accessible balance. There, if a person has 100,000/- net salary, with 50% risk limit, the available salary will be 50.000/-\n    \n- availableBalance: This is the amount accessible by the specific user at the time of accessing the API. This is adjusted balance having all withdrawals deducted in current payroll cycle, allowing the user to draw down any amount up to avaialble Balance.\n    \n- totalWithdraw: This is the sum of all withdrawals by the specific user in current payroll cycle.\n    \n- perDayAvilableSalary: This is the prorated salary on day basis.\n    \n- totalDaysOfMonth: This specifies the total no. of days in current payroll cycle.\n    \n- monthlyBreakup: This provides an array of day by day withdrawals with running withrawal amount of the user in current payroll cycle, including\n    \n    - date: This is the date starting from the first day of the payroll cycle\n        \n    - day: This is the number of day in current payroll cycle\n        \n    - withdrawMondy: This is the amount withdrawn on specific date\n        \n    - totalWithdraw: This is the running withdraw balance.\n        \n    - balane: This is the accessible balance at the specific date after adjusting the withdrawMony on the particular day."
+							},
+							"response": [
+								{
+									"name": "Success",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "https://api-uat-v2.abhi.ae/uat-open-api/transaction/employee/balance",
+											"protocol": "https",
+											"host": [
+												"api-uat-v2",
+												"abhi",
+												"ae"
+											],
+											"path": [
+												"uat-open-api",
+												"transaction",
+												"employee",
+												"balance"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Date",
+											"value": "Wed, 08 Mar 2023 14:11:30 GMT"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Length",
+											"value": "541"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "x-amzn-RequestId",
+											"value": "5df93e4b-370b-4b4b-9d00-a0de6726819a"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "x-xss-protection",
+											"value": "1; mode=block"
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "gzip"
+										},
+										{
+											"key": "strict-transport-security",
+											"value": "max-age=63072000; includeSubdomains; preload"
+										},
+										{
+											"key": "x-frame-options",
+											"value": "DENY"
+										},
+										{
+											"key": "content-security-policy",
+											"value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'"
+										},
+										{
+											"key": "x-amz-apigw-id",
+											"value": "BdyeDETsjoEFWiA="
+										},
+										{
+											"key": "x-content-type-options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-Amzn-Trace-Id",
+											"value": "Root=1-6408978c-6066c59618993db20ac79847"
+										},
+										{
+											"key": "Access-Control-Allow-Credentials",
+											"value": "true"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {\n        \"salary\": 500000,\n        \"availableSalary\": 250000,\n        \"availableBalance\": 21895,\n        \"totalWithdraw\": 500,\n        \"perDayAvailableSalary\": 8064.5161290322585,\n        \"totalDaysOfMonth\": 31,\n        \"monthlyBreakup\": [\n            {\n                \"date\": \"03-01-2023\",\n                \"day\": 1,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 0,\n                \"balance\": 8065\n            },\n            {\n                \"date\": \"03-02-2023\",\n                \"day\": 2,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 0,\n                \"balance\": 16129\n            },\n            {\n                \"date\": \"03-03-2023\",\n                \"day\": 3,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 0,\n                \"balance\": 24194\n            },\n            {\n                \"date\": \"03-04-2023\",\n                \"day\": 4,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 0,\n                \"balance\": 32258\n            },\n            {\n                \"date\": \"03-05-2023\",\n                \"day\": 5,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 0,\n                \"balance\": 40323\n            },\n            {\n                \"date\": \"03-06-2023\",\n                \"day\": 6,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 0,\n                \"balance\": 48387\n            },\n            {\n                \"date\": \"03-07-2023\",\n                \"day\": 7,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 0,\n                \"balance\": 56452\n            },\n            {\n                \"date\": \"03-08-2023\",\n                \"day\": 8,\n                \"withdrawMoney\": 500,\n                \"totalWithdraw\": 500,\n                \"balance\": 64516\n            },\n            {\n                \"date\": \"03-09-2023\",\n                \"day\": 9,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 72581\n            },\n            {\n                \"date\": \"03-10-2023\",\n                \"day\": 10,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 80645\n            },\n            {\n                \"date\": \"03-11-2023\",\n                \"day\": 11,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 88710\n            },\n            {\n                \"date\": \"03-12-2023\",\n                \"day\": 12,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 96774\n            },\n            {\n                \"date\": \"03-13-2023\",\n                \"day\": 13,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 104839\n            },\n            {\n                \"date\": \"03-14-2023\",\n                \"day\": 14,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 112903\n            },\n            {\n                \"date\": \"03-15-2023\",\n                \"day\": 15,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 120968\n            },\n            {\n                \"date\": \"03-16-2023\",\n                \"day\": 16,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 129032\n            },\n            {\n                \"date\": \"03-17-2023\",\n                \"day\": 17,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 137097\n            },\n            {\n                \"date\": \"03-18-2023\",\n                \"day\": 18,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 145161\n            },\n            {\n                \"date\": \"03-19-2023\",\n                \"day\": 19,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 153226\n            },\n            {\n                \"date\": \"03-20-2023\",\n                \"day\": 20,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 161290\n            },\n            {\n                \"date\": \"03-21-2023\",\n                \"day\": 21,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 169355\n            },\n            {\n                \"date\": \"03-22-2023\",\n                \"day\": 22,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 177419\n            },\n            {\n                \"date\": \"03-23-2023\",\n                \"day\": 23,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 185484\n            },\n            {\n                \"date\": \"03-24-2023\",\n                \"day\": 24,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 193548\n            },\n            {\n                \"date\": \"03-25-2023\",\n                \"day\": 25,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 201613\n            },\n            {\n                \"date\": \"03-26-2023\",\n                \"day\": 26,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 209677\n            },\n            {\n                \"date\": \"03-27-2023\",\n                \"day\": 27,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 217742\n            },\n            {\n                \"date\": \"03-28-2023\",\n                \"day\": 28,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 225806\n            },\n            {\n                \"date\": \"03-29-2023\",\n                \"day\": 29,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 233871\n            },\n            {\n                \"date\": \"03-30-2023\",\n                \"day\": 30,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 241935\n            },\n            {\n                \"date\": \"03-31-2023\",\n                \"day\": 31,\n                \"withdrawMoney\": 0,\n                \"totalWithdraw\": 500,\n                \"balance\": 250000\n            }\n        ]\n    },\n    \"message\": \"success\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+								}
+							]
+						},
+						{
+							"name": "Validate Transaction",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"amount\": 500,\n    \"id\": \"7c0c65c4-36d2-47e0-aeaa-d46c7109e981\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}open-api/transaction/employee/validate-transaction",
+									"host": [
+										"{{url}}open-api"
+									],
+									"path": [
+										"transaction",
+										"employee",
+										"validate-transaction"
+									]
+								},
+								"description": "## API Overview\n\n• Endpoint: `POST /transaction/employee/validate-transaction`  \n• HTTP Method: POST  \n• Authentication: Bearer Token required  \n• Content-Type: `application/json`  \n• Parameter Location: Request Body (JSON)  \n• Purpose: Validate a transaction request without actually processing it and get fee information\n\n## Parameter Location\n\n• **Where accepted:** Request Body as JSON\n\n## Request Structure\n\n• **Root object:** JSON with transaction details  \n• **Amount requirement:** Must be a positive number  \n• **Transaction ID requirement:** Must be a valid UUID format  \n• **Validation only:** Does not create actual transaction, only validates and returns fee information\n\n``` json\n{\n  \"amount\": 2500.75,\n  \"id\": \"550e8400-e29b-41d4-a716-446655440000\"\n}\n\n ```\n\n## Required Fields\n\n### amount (number)\n\n• **Required:** Yes  \n• **Purpose:** Transaction amount to validate  \n• **Format:** Positive decimal number  \n• **Validation:** Must be greater than 0  \n• **Currency:** System default currency (typically AED)\n\n### id (string)\n\n• **Required:** Yes  \n• **Purpose:** Transaction ID referencing an existing transaction  \n• **Format:** Valid UUID (e.g., \"550e8400-e29b-41d4-a716-446655440000\")  \n• **Validation:** Must match UUID format pattern  \n• **Usage:** Used for validation context and fee calculation\n\n## Response Structures\n\n### Success Response (HTTP 200)\n\n``` json\n{\n  \"message\": \"Transaction is processable\",\n  \"data\": {\n    \"tariffFee\": 25.50\n  }\n}\n\n ```\n\n## Error Responses\n\n### Validation Errors\n\n#### Missing Amount (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Amount is required and must be a number\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```\n\n#### Invalid Transaction ID Format (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"ID must be a valid UUID\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```"
+							},
+							"response": [
+								{
+									"name": "Success",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"amount\": 500\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "https://api-uat-v2.abhi.ae/uat-open-api/transaction/employee/validate-transaction",
+											"protocol": "https",
+											"host": [
+												"api-uat-v2",
+												"abhi",
+												"ae"
+											],
+											"path": [
+												"uat-open-api",
+												"transaction",
+												"employee",
+												"validate-transaction"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Date",
+											"value": "Tue, 14 Mar 2023 07:22:14 GMT"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Length",
+											"value": "80"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "x-amzn-RequestId",
+											"value": "239ef97a-aafa-4ee7-9629-9d6095cc42e6"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "x-xss-protection",
+											"value": "1; mode=block"
+										},
+										{
+											"key": "strict-transport-security",
+											"value": "max-age=63072000; includeSubdomains; preload"
+										},
+										{
+											"key": "x-frame-options",
+											"value": "DENY"
+										},
+										{
+											"key": "content-security-policy",
+											"value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'"
+										},
+										{
+											"key": "x-amz-apigw-id",
+											"value": "BwoJjGdnDoEFZzw="
+										},
+										{
+											"key": "x-content-type-options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-Amzn-Trace-Id",
+											"value": "Root=1-641020a3-6886639e22b10d0b2faab89f"
+										},
+										{
+											"key": "Access-Control-Allow-Credentials",
+											"value": "true"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {},\n    \"message\": \"Transaction Is Processable\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+								},
+								{
+									"name": "Failure",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"amount\": 500\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "https://api-uat-v2.abhi.ae/uat-open-api/transaction/employee/validate-transaction",
+											"protocol": "https",
+											"host": [
+												"api-uat-v2",
+												"abhi",
+												"ae"
+											],
+											"path": [
+												"uat-open-api",
+												"transaction",
+												"employee",
+												"validate-transaction"
+											]
+										}
+									},
+									"status": "Forbidden",
+									"code": 403,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Date",
+											"value": "Tue, 14 Mar 2023 07:22:50 GMT"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Length",
+											"value": "103"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "x-amzn-RequestId",
+											"value": "95dbe4ca-a521-4c4b-aa5f-98b86c4e2fe5"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "x-xss-protection",
+											"value": "1; mode=block"
+										},
+										{
+											"key": "strict-transport-security",
+											"value": "max-age=63072000; includeSubdomains; preload"
+										},
+										{
+											"key": "x-frame-options",
+											"value": "DENY"
+										},
+										{
+											"key": "content-security-policy",
+											"value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'"
+										},
+										{
+											"key": "x-amz-apigw-id",
+											"value": "BwoPaEVVjoEFU9w="
+										},
+										{
+											"key": "x-content-type-options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-Amzn-Trace-Id",
+											"value": "Root=1-641020c8-43dbf736209c5aa02b90fc53"
+										},
+										{
+											"key": "Access-Control-Allow-Credentials",
+											"value": "true"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {},\n    \"message\": \"Amount is exceeding from available balance, Available Balance is -90\",\n    \"code\": 403\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Traansaction Status",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{url}}open-api/status/:transactionId",
+									"host": [
+										"{{url}}open-api"
+									],
+									"path": [
+										"status",
+										":transactionId"
+									],
+									"variable": [
+										{
+											"key": "transactionId",
+											"value": "ca72fa31-c477-41ea-8138-2c806f07d23d"
+										}
+									]
+								},
+								"description": "## API Overview\n\n• Endpoint: `GET /status/{transactionId}`  \n• HTTP Method: GET  \n• Authentication: Bearer Token required  \n• Content-Type: `application/json`  \n• Parameter Location: URL Path Parameter  \n• Purpose: Retrieve the current status of a specific transaction\n\n## Parameter Location\n\n• **Where accepted:** URL Path Parameter\n\n## Request Structure\n\n• **Path parameter:** Transaction ID embedded in URL path  \n• **Authentication required:** Bearer token in Authorization header  \n• **No request body:** Simple GET request with transaction ID in URL\n\n```\nGET /status/550e8400-e29b-41d4-a716-446655440000\n\n ```\n\n## Required Fields\n\n### transactionId (URL path parameter)\n\n• **Required:** Yes  \n• **Purpose:** Unique identifier of the transaction to check status  \n• **Format:** Valid UUID (e.g., \"550e8400-e29b-41d4-a716-446655440000\")  \n• **Validation:** Must match UUID format pattern  \n• **Location:** URL path parameter\n\n### Authentication\n\n• **Bearer Token:** Required in Authorization header  \n• **Format:** `Authorization: Bearer`  \n• **Validation:** Token must be valid and user must have access to the transaction\n\n## Response Structures\n\n### Success Response (HTTP 200)\n\n``` json\n{\n  \"message\": \"Success\",\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"status\": \"completed\"\n  }\n}\n\n ```\n### Transaction Status Values\n\n#### Processing Status\n• **in progress:** Transaction is being processed\n• **queued:** Transaction queued for processing\n\n#### Approval Status\n• **pending_approval:** Manual approval required\n• **waitingForApproval:** Waiting for organization approval\n\n#### Completion Status\n• **complete:** Transaction successfully completed\n\n#### Failure Status\n• **failed:** Transaction processing failed\n• **declined:** Transaction declined by system or bank\n• **rejected:** Transaction manually rejected by approver\n• **error:** System error occurred\n\n## Error Responses\n\n### Validation Errors\n\n#### Invalid Transaction ID Format (HTTP 400)\n\n```json\n{\n  \"data\": {},\n  \"message\": \"Transaction ID must be a valid UUID\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n```"
+							},
+							"response": [
+								{
+									"name": "Success",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "https://api-uat-v2.abhi.ae/uat-open-api/status/:transactionId",
+											"protocol": "https",
+											"host": [
+												"api-uat-v2",
+												"abhi",
+												"ae"
+											],
+											"path": [
+												"uat-open-api",
+												"status",
+												":transactionId"
+											],
+											"variable": [
+												{
+													"key": "transactionId",
+													"value": "760ab263-2297-461c-8e22-940b5c7bdf5a"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Date",
+											"value": "Thu, 09 Mar 2023 04:47:49 GMT"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Length",
+											"value": "610"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "x-amzn-RequestId",
+											"value": "ce881f1b-b4b1-4a23-a06f-5bbe5fa6c0a1"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "x-xss-protection",
+											"value": "1; mode=block"
+										},
+										{
+											"key": "strict-transport-security",
+											"value": "max-age=63072000; includeSubdomains; preload"
+										},
+										{
+											"key": "x-frame-options",
+											"value": "DENY"
+										},
+										{
+											"key": "content-security-policy",
+											"value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'"
+										},
+										{
+											"key": "x-amz-apigw-id",
+											"value": "Bfy13Fu8DoEFS_g="
+										},
+										{
+											"key": "x-content-type-options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-Amzn-Trace-Id",
+											"value": "Root=1-640964f2-6942ab09354b6f356d96932b"
+										},
+										{
+											"key": "Access-Control-Allow-Credentials",
+											"value": "true"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {\n        \"id\": \"eefda895-30cb-479e-85bb-f64c1592b09c\",\n        \"status\": \"error\"\n    },\n    \"message\": \"Success\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+								}
+							]
+						}
+					],
+					"description": "Transactions API endpoints for Employees"
+				},
+				{
+					"name": "Employer",
+					"item": [
+						{
+							"name": "Get Transactions",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{url}}open-api/transaction/employer/all?limit=1&page=1",
+									"host": [
+										"{{url}}open-api"
+									],
+									"path": [
+										"transaction",
+										"employer",
+										"all"
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "1"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "status",
+											"value": "complete",
+											"disabled": true
+										},
+										{
+											"key": "amount",
+											"value": "500",
+											"disabled": true
+										},
+										{
+											"key": "from",
+											"value": "2020-01-01T00%3A00%3A00,B05%3A00",
+											"disabled": true
+										},
+										{
+											"key": "to",
+											"value": "2023-03-07T23%3A59%3A59,B05%3A00",
+											"disabled": true
+										},
+										{
+											"key": "emiratesId",
+											"value": "104210187123175",
+											"disabled": true
+										},
+										{
+											"key": "transactionId",
+											"value": "7a4280ff-ad08-4acd-b259-c9fcb2ccc293",
+											"disabled": true
+										}
+									]
+								},
+								"description": "## API Overview\n\n• Endpoint: `GET /transaction/employer/all`  \n• HTTP Method: GET  \n• Authentication: Bearer Token required  \n• Content-Type: `application/json`  \n• Parameter Location: Query String Parameters  \n• Purpose: Retrieve all transactions for the organization with filtering and pagination support\n\n## Parameter Location\n\n• **Where accepted:** Query String Parameters\n\n## Request Structure\n\n• **Parameters:** All parameters are optional with system defaults  \n• **Filtering:** Supports multiple filter criteria including dates, amounts, employee details  \n• **Pagination:** Supports limit and page parameters for result pagination  \n• **Sorting:** Supports sorting by various columns and directions\n\n```\nGET /transaction/employer/all?limit=50&page=1&status=completed&from=2024-01-01&to=2024-12-31\n\n ```\n\n## Optional Fields\n\n### limit (number)\n\n• **Required:** No  \n• **Purpose:** Number of transactions to return per page  \n• **Format:** Positive integer  \n• **Validation:** Must be between 1 and 250  \n• **Default:** 10\n\n### page (number)\n\n• **Required:** No  \n• **Purpose:** Page number for pagination  \n• **Format:** Positive integer  \n• **Validation:** Must be 1 or greater  \n• **Default:** 1\n\n### from (date)\n\n• **Required:** No  \n• **Purpose:** Start date for transaction filter  \n• **Format:** Date string (ISO format)  \n• **Default:** Beginning of time if 'to' is provided  \n• **Processing:** Automatically set to start of day\n\n### to (date)\n\n• **Required:** No  \n• **Purpose:** End date for transaction filter  \n• **Format:** Date string (ISO format)  \n• **Default:** Current date if 'from' is provided  \n• **Processing:** Automatically set to end of day\n\n### amount (number)\n\n• **Required:** No  \n• **Purpose:** Filter transactions by specific amount  \n• **Format:** Integer  \n• **Validation:** Must be positive integer\n\n### status (string)\n\n• **Required:** No  \n• **Purpose:** Filter transactions by status  \n• **Format:** Comma-separated status values  \n• **Valid values:** completed, failed, in progress, pending_approval, declined, rejected, queued\n\n### transactionId (string)\n\n• **Required:** No  \n• **Purpose:** Filter by specific transaction ID  \n• **Format:** Valid UUID  \n• **Validation:** Must match UUID format pattern\n\n### transactionType (string)\n\n• **Required:** No  \n• **Purpose:** Filter by transaction type  \n• **Format:** String value from allowed transaction types  \n• **Valid values:** EWA, ASA, AbhiDost, Payroll, Advance, BillPayment, etc.\n\n### employeeId (string)\n\n• **Required:** No  \n• **Purpose:** Filter transactions by specific employee  \n• **Format:** String identifier\n\n### emiratesId (string)\n\n• **Required:** No  \n• **Purpose:** Filter transactions by employee CNIC/Emirates ID  \n• **Format:** String value\n\n### employeeFirstName (string)\n\n• **Required:** No  \n• **Purpose:** Filter transactions by employee first name  \n• **Format:** String value\n\n### employeeLastName (string)\n\n• **Required:** No  \n• **Purpose:** Filter transactions by employee last name  \n• **Format:** String value\n\n### employeeCode (string)\n\n• **Required:** No  \n• **Purpose:** Filter transactions by employee code  \n• **Format:** String value\n\n### department (string)\n\n• **Required:** No  \n• **Purpose:** Filter transactions by employee department  \n• **Format:** String value\n\n### accountToTitle (string)\n\n• **Required:** No  \n• **Purpose:** Filter by destination account title  \n• **Format:** String value\n\n### accountToNumber (string)\n\n• **Required:** No  \n• **Purpose:** Filter by destination account number  \n• **Format:** String value\n\n### accountToBank (string)\n\n• **Required:** No  \n• **Purpose:** Filter by destination bank name  \n• **Format:** String value\n\n## Response Structures\n\n### Success Response with Transactions (HTTP 200)\n\n``` json\n{\n  \"total\": 150,\n  \"results\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"amount\": 2500.00,\n      \"fee\": 25.00,\n      \"vat\": 3.25,\n      \"transactionStatus\": \"completed\",\n      \"transactionDate\": \"2024-01-15T14:30:00Z\",\n      \"errorMessage\": null,\n      \"accountToNumber\": \"1234567890\",\n      \"accountToTitle\": \"John Doe Account\",\n      \"accountToBank\": \"ABC Bank\",\n      \"stan\": \"123456\",\n      \"createdBy\": {\n        \"id\": \"user-uuid\",\n        \"persons\": [\n          {\n            \"id\": \"person-uuid\",\n            \"firstName\": \"John\",\n            \"lastName\": \"Doe\",\n            \"emiratesId\": \"1234567890123\",\n            \"employees\": [\n              {\n                \"id\": \"employee-uuid\",\n                \"employeeCode\": \"EMP001\",\n                \"netSalary\": 50000.00,\n                \"officialPhone\": \"+971501234567\"\n              }\n            ]\n          }\n        ]\n      }\n    }\n  ]\n}\n\n ```\n\n### Success Response with No Transactions (HTTP 200)\n\n``` json\n{\n  \"total\": 0,\n  \"results\": []\n}\n\n ```\n\n## Error Responses\n\n### Validation Errors\n\n#### Invalid Limit Range (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Limit must be between 1 and 250\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```\n\n#### Invalid Page Number (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Page must be 1 or greater\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```"
+							},
+							"response": [
+								{
+									"name": "Success",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "https://api-uat-v2.abhi.ae/uat-open-api/transactions/?limit=10&page=1",
+											"protocol": "https",
+											"host": [
+												"api-uat-v2",
+												"abhi",
+												"ae"
+											],
+											"path": [
+												"uat-open-api",
+												"transactions",
+												""
+											],
+											"query": [
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "status",
+													"value": "complete",
+													"disabled": true
+												},
+												{
+													"key": "amount",
+													"value": "500",
+													"disabled": true
+												},
+												{
+													"key": "from",
+													"value": "2020-01-01T00%3A00%3A00,B05%3A00",
+													"disabled": true
+												},
+												{
+													"key": "to",
+													"value": "2023-03-07T23%3A59%3A59,B05%3A00",
+													"disabled": true
+												},
+												{
+													"key": "emiratesId",
+													"value": "104210187123175",
+													"disabled": true
+												},
+												{
+													"key": "transactionId",
+													"value": "7a4280ff-ad08-4acd-b259-c9fcb2ccc293",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Date",
+											"value": "Wed, 08 Mar 2023 12:47:31 GMT"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Length",
+											"value": "731"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "x-amzn-RequestId",
+											"value": "668f833a-fe0b-4d5a-916b-75290e51b267"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "x-xss-protection",
+											"value": "1; mode=block"
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "gzip"
+										},
+										{
+											"key": "strict-transport-security",
+											"value": "max-age=63072000; includeSubdomains; preload"
+										},
+										{
+											"key": "x-frame-options",
+											"value": "DENY"
+										},
+										{
+											"key": "content-security-policy",
+											"value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'"
+										},
+										{
+											"key": "x-amz-apigw-id",
+											"value": "BdmKyG9qjoEFfCg="
+										},
+										{
+											"key": "x-content-type-options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-Amzn-Trace-Id",
+											"value": "Root=1-640883de-13d5f6e410300b0907e2df64"
+										},
+										{
+											"key": "Access-Control-Allow-Credentials",
+											"value": "true"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {\n        \"total\": 1,\n        \"results\": [\n            {\n                \"id\": \"760ab263-2297-461c-8e22-940b5c7bdf5a\",\n                \"amount\": \"500\",\n                \"fee\": \"90\",\n                \"vat\": \"5\",\n                \"transactionStatus\": \"error\",\n                \"transactionDate\": \"2023-03-08T12:02:42.508Z\",\n                \"errorMessage\": \"GatewayCriticalError: from: titleFetch | STAN: 070684| ResponseDetail: PROCESSED OK\",\n                \"accountToNumber\": \"1231221312312\",\n                \"accountToTitle\": \"John Doe\",\n                \"accountToBank\": \"Silk Bank\",\n                \"stan\": null,\n                \"createdBy\": {\n                    \"id\": \"a03e56cb-a47e-416b-b549-024bcbfecdb9\",\n                    \"persons\": [\n                        {\n                            \"id\": \"bc834616-27be-4b13-8470-19b25d64dd24\",\n                            \"firstName\": \"John\",\n                            \"lastName\": \"Doe\",\n                            \"emiratesId\": \"104210187123176\",\n                            \"employees\": [\n                                {\n                                    \"id\": \"39e542ee-ae52-4a57-af31-d97b4b02178c\",\n                                    \"employeeCode\": null,\n                                    \"netSalary\": \"500000\",\n                                    \"officialPhone\": null\n                                }\n                            ]\n                        }\n                    ]\n                }\n            }\n        ]\n    },\n    \"message\": \"Success\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Transaction Status",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{url}}open-api/status/:transactionId",
+									"host": [
+										"{{url}}open-api"
+									],
+									"path": [
+										"status",
+										":transactionId"
+									],
+									"variable": [
+										{
+											"key": "transactionId",
+											"value": "bcebd980-f63c-4dad-9556-41e35f0aa5c3"
+										}
+									]
+								},
+								"description": "This is a HTTP request to the API endpoint `/transactions/employee/status/760ab263-2297-461c-8e22-940b5c7bdf5a`. The request includes a JSON payload with a \\`data\\` object containing an `id` field with the value \"eefda895-30cb-479e-85bb-f64c1592b09c\" and a `status` field with the value \"error\".  \nThe response to the request has a `status` field with the value \"success\", a `message` field with the value \"Success\", and a \\`code\\` field with the value 200."
+							},
+							"response": [
+								{
+									"name": "Success",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "https://api-uat-v2.abhi.ae/uat-open-api/status/:transactionId",
+											"protocol": "https",
+											"host": [
+												"api-uat-v2",
+												"abhi",
+												"ae"
+											],
+											"path": [
+												"uat-open-api",
+												"status",
+												":transactionId"
+											],
+											"variable": [
+												{
+													"key": "transactionId",
+													"value": "760ab263-2297-461c-8e22-940b5c7bdf5a"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Date",
+											"value": "Thu, 09 Mar 2023 04:47:49 GMT"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Length",
+											"value": "610"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "x-amzn-RequestId",
+											"value": "ce881f1b-b4b1-4a23-a06f-5bbe5fa6c0a1"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "x-xss-protection",
+											"value": "1; mode=block"
+										},
+										{
+											"key": "strict-transport-security",
+											"value": "max-age=63072000; includeSubdomains; preload"
+										},
+										{
+											"key": "x-frame-options",
+											"value": "DENY"
+										},
+										{
+											"key": "content-security-policy",
+											"value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'"
+										},
+										{
+											"key": "x-amz-apigw-id",
+											"value": "Bfy13Fu8DoEFS_g="
+										},
+										{
+											"key": "x-content-type-options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-Amzn-Trace-Id",
+											"value": "Root=1-640964f2-6942ab09354b6f356d96932b"
+										},
+										{
+											"key": "Access-Control-Allow-Credentials",
+											"value": "true"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {\n        \"id\": \"eefda895-30cb-479e-85bb-f64c1592b09c\",\n        \"status\": \"error\"\n    },\n    \"message\": \"Success\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+								}
+							]
+						},
+						{
+							"name": "Validate Questions",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"emiratesId\": \"784198712345678\",\r\n  \"questionsAnswers\": [\r\n    {\r\n      \"question\": \"What is your mother's maiden name?\",\r\n      \"answer\": \"Smith\"\r\n    },\r\n    {\r\n      \"question\": \"What was the name of your first pet?\",\r\n      \"answer\": \"Fluffy\"\r\n    },\r\n    {\r\n      \"question\": \"What city were you born in?\",\r\n      \"answer\": \"Dubai\"\r\n    }\r\n  ]\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}open-api/validate-questions",
+									"host": [
+										"{{url}}open-api"
+									],
+									"path": [
+										"validate-questions"
+									]
+								},
+								"description": "# Validate Questions API - Postman Documentation\n\n## Overview\n\nThe Validate Questions API is a POST endpoint that validates and stores employee financial assessment questions for verification purposes. This API is part of the Open API module and requires Bearer token authentication.\n\n## Base URL\n\n`{{base_url}}/open-api/validate-questions`\n\n## Authentication\n\n- **Type:** Bearer Token\n    \n- **Header:** `Authorization: Bearer {{jwt_token}}`\n    \n- **Required:** Yes\n    \n\n## Request\n\n### HTTP Method\n\nPOST\n\n### Headers\n\n- `Content-Type: application/json` (required)\n    \n- `Authorization: Bearer {{jwt_token}}` (required)\n    \n\n### Request Body Schema\n\nJSON\n\n```\n{\n  \"emiratesId\": \"string\",\n  \"answers\": {\n    \"A1\": \"boolean\",\n    \"A2\": \"number\",\n    \"A3\": \"number\",\n    \"A4\": \"number\"\n  }\n}\n\n ```\n\n### Request Body Parameters\n\n- `emiratesId` (string, required)\n    \n    - **Description:** Emirates ID of the employee for whom questions are being validated\n        \n    - **Format:** String value\n        \n    - **Validation:** Must not be empty\n        \n    - **Example:** `\"784185963214789\"`\n        \n- `answers` (object, required)\n    \n    - **Description:** Object containing answers to predefined financial assessment questions\n        \n- `answers.A1` (boolean, required)\n    \n    - **Description:** Indicates if employee has other loans or EMIs\n        \n    - **Validation:** Must be boolean (true/false)\n        \n    - **Example:** `true`\n        \n- `answers.A2` (number, required)\n    \n    - **Description:** Food, Medical & Travel expenses amount\n        \n    - **Validation:** Must be number, minimum value 0\n        \n    - **Example:** `5000`\n        \n- `answers.A3` (number, required)\n    \n    - **Description:** Rent, Mobile Top-up & utilities expenses amount\n        \n    - **Validation:** Must be number, minimum value 0\n        \n    - **Example:** `3000`\n        \n- `answers.A4` (number, required)\n    \n    - **Description:** Other expenses amount\n        \n    - **Validation:** Must be number, minimum value 0\n        \n    - **Example:** `2000`\n        \n\n## Response\n\n### Success Response (HTTP 200)\n\nJSON\n\n```\n{\n  \"data\": {\n    \"employeeId\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"message\": \"Questions validated and stored successfully in employee record\"\n  },\n  \"message\": \"Success\",\n  \"status\": \"success\",\n  \"code\": 200\n}\n\n ```\n\n### Error Responses\n\n#### Missing Required Fields (HTTP 400)\n\nJSON\n\n```\n{\n  \"data\": {},\n  \"message\": \"emiratesId must be a string\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```\n\n#### Invalid Answers Object (HTTP 400)\n\nJSON\n\n```\n{\n  \"data\": {},\n  \"message\": \"answers must be an object\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```\n\n#### Invalid Answer Values (HTTP 400)\n\nJSON\n\n```\n{\n  \"data\": {},\n  \"message\": \"A1 must be a boolean value\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```\n\n#### Employee Not Found (HTTP 404)\n\nJSON\n\n```\n{\n  \"data\": {},\n  \"message\": \"Employee not found for the provided Emirates ID\",\n  \"status\": \"Not Found\",\n  \"code\": 404\n}\n\n ```\n\n#### Missing Authorization Token (HTTP 401)\n\nJSON\n\n```\n{\n  \"data\": {},\n  \"message\": \"Authorization token required\",\n  \"status\": \"Unauthorized\",\n  \"code\": 401\n}\n\n ```\n\n#### Insufficient Permissions (HTTP 403)\n\nJSON\n\n```\n{\n  \"data\": {},\n  \"message\": \"Insufficient permissions to validate questions\",\n  \"status\": \"Forbidden\",\n  \"code\": 403\n}\n\n ```\n\n#### Internal Server Error (HTTP 500)\n\nJSON\n\n```\n{\n  \"data\": {},\n  \"message\": \"Unable to process questions validation request\",\n  \"status\": \"Internal Server Error\",\n  \"code\": 500\n}\n\n ```\n\n## Examples\n\n### Example 1: Basic Questions Validation\n\n**Request:**\n\nJSON\n\n```\n{\n  \"emiratesId\": \"784185963214789\",\n  \"answers\": {\n    \"A1\": false,\n    \"A2\": 4000,\n    \"A3\": 2500,\n    \"A4\": 1500\n  }\n}\n\n ```\n\n**Response:**\n\nJSON\n\n```\n{\n  \"data\": {\n    \"employeeId\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"message\": \"Questions validated and stored successfully in employee record\"\n  },\n  \"message\": \"Success\",\n  \"status\": \"success\",\n  \"code\": 200\n}\n\n ```\n\n### Example 2: Employee With Existing Loans\n\n**Request:**\n\nJSON\n\n```\n{\n  \"emiratesId\": \"784185963214789\",\n  \"answers\": {\n    \"A1\": true,\n    \"A2\": 6000,\n    \"A3\": 3500,\n    \"A4\": 2500\n  }\n}\n\n ```\n\n**Response:**\n\nJSON\n\n```\n{\n  \"data\": {\n    \"employeeId\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"message\": \"Questions validated and stored successfully in employee record\"\n  },\n  \"message\": \"Success\",\n  \"status\": \"success\",\n  \"code\": 200\n}\n\n ```\n\n### Example 3: Validation Error\n\n**Request:**\n\nJSON\n\n```\n{\n  \"emiratesId\": \"\",\n  \"answers\": {\n    \"A1\": \"invalid\",\n    \"A2\": -100,\n    \"A3\": \"not_a_number\",\n    \"A4\": null\n  }\n}\n\n ```\n\n**Response:**\n\nJSON\n\n```\n{\n  \"data\": {},\n  \"message\": \"emiratesId must be a string\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```\n\n## Questions Structure\n\nThe API validates the following predefined questions:\n\n1. **Q1:** \"Do you have any other loans or EMIs?\" (Boolean)\n    \n2. **Q2:** Expense categories:\n    \n    - **A2:** \"Food, Medical & Travel\" (Numeric amount)\n        \n    - **A3:** \"Rent, Mobile Top-up & utilities\" (Numeric amount)\n        \n    - **A4:** \"Other Expenses\" (Numeric amount)\n        \n\n## Postman Collection Variables\n\n- `base_url`: Base URL for the API (Example: `https://api.yourdomain.com`)\n    \n- `jwt_token`: JWT token for authentication (Example: `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...`)\n    \n\n## Testing Scripts\n\n### Pre-request Script\n\nJavaScript\n\n```\n// Pre-request script can be used to generate tokens or set variables\nconsole.log('Preparing request for Validate Questions API');\n\n ```\n\n### Test Script\n\nJavaScript\n\n```\n// Test script to validate response\npm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});\npm.test(\"Response has success structure\", function () {\n    var jsonData = pm.response.json();\n    pm.expect(jsonData).to.have.property('data');\n    pm.expect(jsonData).to.have.property('message');\n    pm.expect(jsonData).to.have.property('status');\n    pm.expect(jsonData).to.have.property('code');\n    pm.expect(jsonData.data).to.have.property('employeeId');\n    pm.expect(jsonData.data).to.have.property('message');\n});\n\n ```\n\n## Usage Notes\n\n1. **Authentication:** All requests must include a valid JWT token in the `Authorization` header\n    \n2. **Validation:** Input validation is performed on all requests\n    \n3. **Organization Isolation:** Users can only validate questions for employees in their organization\n    \n4. **Data Storage:** Questions are stored in the employee's comment field as JSON\n    \n5. **Error Handling:** Comprehensive error responses for various failure scenarios"
+							},
+							"response": []
+						}
+					],
+					"description": "Transaction API endpoints for employer"
+				},
+				{
+					"name": "Cancel Transaction",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{url}}open-api/cancel/:transactionId",
+							"host": [
+								"{{url}}open-api"
+							],
+							"path": [
+								"cancel",
+								":transactionId"
+							],
+							"variable": [
+								{
+									"key": "transactionId",
+									"value": "d2d1020a-1969-4d67-9b82-7170177e20c1"
+								}
+							]
+						},
+						"description": "## API Overview\n\n• Endpoint: `PUT /open-api/cancel/:transactionId`  \n• HTTP Method: PUT  \n• Authentication: Bearer Token required  \n• Content-Type: `application/json`  \n• Parameter Location: URL Path Parameter  \n• Purpose: Cancel a transaction by its unique ID - this is an irreversible action\n\n## Parameter Location\n\n• **Where accepted:** URL Path Parameter\n\n## Request Structure\n\n• **Path parameter required:** Transaction ID in URL path  \n• **No request body:** This endpoint does not require a request body  \n• **Irreversible action:** Once a transaction is cancelled, it cannot be retried or processed again  \n• **Transaction states:** Only transactions in specific states can be cancelled\n\n```\nPUT /open-api/cancel/d2d1020a-1969-4d67-9b82-7170177e20c1\n\n ```\n\n## Required Fields\n\n### transactionId (string)\n\n• **Required:** Yes  \n• **Purpose:** Unique identifier of the transaction to be cancelled  \n• **Format:** Valid UUID format  \n• **Location:** URL path parameter  \n• **Validation:** Must be a valid UUID (e.g., \"550e8400-e29b-41d4-a716-446655440000\")  \n• **Example:** \"d2d1020a-1969-4d67-9b82-7170177e20c1\"\n\n## Response Structures\n\n### Success Response (HTTP 200)\n\n``` json\n{\n  \"data\": {\n    \"generatedMaps\": [],\n    \"raw\": [],\n    \"affected\": 1\n  },\n  \"message\": \"Success\",\n  \"status\": \"success\",\n  \"code\": 200\n}\n\n ```\n\n### Response Fields\n\n#### data (object)\n\n• **Purpose:** Contains operation result details  \n• **Format:** Object with operation metadata\n\n#### affected (number)\n\n• **Purpose:** Number of records affected by the cancellation  \n• **Format:** Integer value  \n• **Expected Value:** 1 for successful cancellation\n\n#### generatedMaps (array)\n\n• **Purpose:** Generated mapping data from the operation  \n• **Format:** Array (typically empty for cancellations)\n\n#### raw (array)\n\n• **Purpose:** Raw database operation results  \n• **Format:** Array (typically empty for cancellations)\n\n## Error Responses\n\n### Validation Errors\n\n#### Invalid Transaction ID Format (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Transaction ID must be a valid UUID\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```\n\n#### Missing Transaction ID (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Transaction ID is required\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```\n\n### Transaction Errors\n\n#### Transaction Not Found (HTTP 404)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Transaction not found\",\n  \"status\": \"Not Found\",\n  \"code\": 404\n}\n\n ```\n\n#### Transaction Already Cancelled (HTTP 409)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Transaction has already been cancelled\",\n  \"status\": \"Conflict\",\n  \"code\": 409\n}\n\n ```\n\n#### Transaction Already Completed (HTTP 422)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Cannot cancel completed transaction\",\n  \"status\": \"Unprocessable Entity\",\n  \"code\": 422\n}\n\n ```\n\n#### Transaction Cannot Be Cancelled (HTTP 422)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Transaction is in a state that cannot be cancelled\",\n  \"status\": \"Unprocessable Entity\",\n  \"code\": 422\n}\n\n ```\n\n### Authorization Errors\n\n#### Missing Authorization Token (HTTP 401)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Authorization token required\",\n  \"status\": \"Unauthorized\",\n  \"code\": 401\n}\n\n ```\n\n#### Invalid or Expired Token (HTTP 401)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Invalid or expired authorization token\",\n  \"status\": \"Unauthorized\",\n  \"code\": 401\n}\n\n ```\n\n#### Insufficient Permissions (HTTP 403)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Insufficient permissions to cancel this transaction\",\n  \"status\": \"Forbidden\",\n  \"code\": 403\n}\n\n ```\n\n### Server Errors\n\n#### Internal Server Error (HTTP 500)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Unable to process cancellation request\",\n  \"status\": \"Internal Server Error\",\n  \"code\": 500\n}\n\n ```\n\n#### Database Error (HTTP 500)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Database operation failed\",\n  \"status\": \"Internal Server Error\",\n  \"code\": 500\n}\n\n ```\n\n## Business Rules\n\n• **Cancellable States:** Only transactions in \"pending\", \"queued\", or \"in progress\" states can be cancelled  \n• **Non-cancellable States:** Completed, failed, or already cancelled transactions cannot be cancelled  \n• **Irreversible Action:** Once cancelled, the transaction cannot be reprocessed or retried  \n• **Immediate Effect:** Cancellation takes effect immediately upon successful API call  \n• **Balance Impact:** Any reserved balances will be released immediately\n\n## Security Notes\n\n• **Authentication Required:** Valid Bearer token must be provided  \n• **Authorization Check:** User must have permission to cancel transactions  \n• **Organization Scope:** Users can only cancel transactions within their organization  \n• **Audit Trail:** All cancellation requests are logged for audit purposes  \n• **Rate Limiting:** Subject to standard API rate limits\n\n## Usage Example\n\n``` bash\ncurl -X PUT \"{{url}}open-api/cancel/d2d1020a-1969-4d67-9b82-7170177e20c1\" \\\n  -H \"Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...\" \\\n  -H \"Content-Type: application/json\"\n\n ```\n\n### Example with Variables\n\n``` bash\n# Set variables\nTRANSACTION_ID=\"d2d1020a-1969-4d67-9b82-7170177e20c1\"\nAUTH_TOKEN=\"your-jwt-token-here\"\n# Cancel transaction\ncurl -X PUT \"{{url}}open-api/cancel/${TRANSACTION_ID}\" \\\n  -H \"Authorization: Bearer ${AUTH_TOKEN}\" \\\n  -H \"Content-Type: application/json\"\n\n ```\n\n## Integration Guidelines\n\n### Before Cancelling\n\n1. **Verify transaction status** using the transaction status endpoint\n    \n2. **Check if cancellation is allowed** for the current transaction state\n    \n3. **Confirm user authorization** to cancel the specific transaction\n    \n\n### After Cancelling\n\n1. **Verify cancellation success** by checking the response\n    \n2. **Update local records** to reflect the cancelled status\n    \n3. **Notify relevant parties** about the transaction cancellation\n    \n4. **Release any reserved resources** or balances\n    \n\n### Error Handling\n\n• **Retry Logic:** Do not retry cancellation requests for 4xx errors  \n• **409 Conflicts:** Handle already cancelled transactions gracefully  \n• **422 Errors:** Check transaction state before attempting cancellation  \n• **5xx Errors:** Implement exponential backoff retry for server errors"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "https://api-qa-v2.abhi.ae/qa-open-api/cancel/:transactionId",
+									"protocol": "https",
+									"host": [
+										"api-qa-v2",
+										"abhi",
+										"ae"
+									],
+									"path": [
+										"qa-open-api",
+										"cancel",
+										":transactionId"
+									],
+									"variable": [
+										{
+											"key": "transactionId",
+											"value": "d2d1020a-1969-4d67-9b82-7170177e20c1"
+										}
+									]
+								}
+							},
+							"_postman_previewlanguage": "Text",
+							"header": [],
+							"cookie": [
+								{
+									"expires": "Invalid Date",
+									"domain": "",
+									"path": ""
+								}
+							],
+							"body": "{\n    \"data\": {\n        \"generatedMaps\": [],\n        \"raw\": [],\n        \"affected\": 1\n    },\n    \"message\": \"Success\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+						}
+					]
+				}
+			],
+			"description": "#### API reference for Transactions endpoints"
+		},
+		{
+			"name": "Organizations",
+			"item": [
+				{
+					"name": "Get All Sub Organizations",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}open-api/organizations?page=1&limit=100",
+							"host": [
+								"{{url}}open-api"
+							],
+							"path": [
+								"organizations"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "100"
+								}
+							]
+						},
+						"description": "## API Overview\n\n• Endpoint: `GET /organizations`  \n• HTTP Method: GET  \n• Authentication: Bearer Token required  \n• Content-Type: `application/json`  \n• Parameter Location: Query String Parameters  \n• Purpose: Retrieve all sub-organizations under the authenticated user's parent organization\n\n## Parameter Location\n\n• **Where accepted:** Query String Parameters\n\n## Request Structure\n\n• **Parameters:** All parameters are optional with system defaults  \n• **Filtering:** Supports date range filtering and organization details  \n• **Pagination:** Supports limit and page parameters for result pagination  \n• **Sorting:** Supports sorting by organization columns and directions\n\n```\nGET /organizations?limit=50&page=1&from=2024-01-01&to=2024-12-31\n\n ```\n\n## Optional Fields\n\n### limit (number)\n\n• **Required:** No  \n• **Purpose:** Number of organizations to return per page  \n• **Format:** Positive integer  \n• **Validation:** Must be between 1 and 250  \n• **Default:** System default limit\n\n### page (number)\n\n• **Required:** No  \n• **Purpose:** Page number for pagination  \n• **Format:** Positive integer  \n• **Validation:** Must be 1 or greater  \n• **Default:** 1\n\n### from (date)\n\n• **Required:** No  \n• **Purpose:** Start date for organization creation filter  \n• **Format:** Date string (ISO format)  \n• **Default:** No date filtering  \n• **Processing:** Automatically set to start of day\n\n### to (date)\n\n• **Required:** No  \n• **Purpose:** End date for organization creation filter  \n• **Format:** Date string (ISO format)  \n• **Default:** No date filtering  \n• **Processing:** Automatically set to end of day\n\n### showInactive (boolean)\n\n• **Required:** No  \n• **Purpose:** Include inactive organizations in results  \n• **Format:** Boolean value (true/false)  \n• **Default:** false (only active organizations)\n\n### column (string)\n\n• **Required:** No  \n• **Purpose:** Column to sort results by  \n• **Format:** String value from allowed columns  \n• **Valid values:** organizations.createdAt, organizations.name  \n• **Default:** organizations.createdAt\n\n### order (string)\n\n• **Required:** No  \n• **Purpose:** Sort direction  \n• **Format:** String value  \n• **Valid values:** ASC, DESC  \n• **Default:** DESC\n\n## Response Structures\n\n### Success Response with Organizations (HTTP 200)\n\n``` json\n{\n  \"total\": 25,\n  \"results\": [\n    {\n      \"id\": \"0000e8400-e29b-41d4-a716-446655440000\",\n      \"deletedDate\": null,\n      \"name\": \"Acme Corp Subsidiary\",\n      \"organizationNumber\": \"ORG001\",\n      \"industry\": \"Technology\",\n      \"managementAlias\": \"ACME_SUB\",\n      \"organizationType\": \"subsidiary\",\n      \"active\": true,\n      \"creditLimit\": 1000000.00,\n      \"businessType\": {\n        \"name\": \"Software Development\",\n        \"country\": \"UAE\"\n      },\n      \"parentOrganizationId\": \"00009500-f39c-52e5-b827-556766550111\"\n    },\n    {\n      \"id\": \"00009600-g40d-63f6-c938-667877661222\",\n      \"deletedDate\": null,\n      \"name\": \"Acme Corp Branch Office\",\n      \"organizationNumber\": \"ORG002\", \n      \"industry\": \"Technology\",\n      \"managementAlias\": \"ACME_BRANCH\",\n      \"organizationType\": \"branch\",\n      \"active\": true,\n      \"creditLimit\": 500000.00,\n      \"businessType\": {\n        \"name\": \"IT Services\",\n        \"country\": \"UAE\"\n      },\n      \"parentOrganizationId\": \"00009500-f39c-52e5-b827-556766550111\"\n    }\n  ]\n}\n\n ```\n\n### Success Response with No Organizations (HTTP 200)\n\n``` json\n{\n  \"total\": 0,\n  \"results\": []\n}\n\n ```\n\n## Error Responses\n\n### Validation Errors\n\n#### Invalid Sort Column (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Invalid sort column\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```"
+					},
+					"response": [
+						{
+							"name": "Sucess",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://api-uat-v2.abhi.ae/uat-open-api/organizations?page=1&limit=10",
+									"protocol": "https",
+									"host": [
+										"api-uat-v2",
+										"abhi",
+										"ae"
+									],
+									"path": [
+										"uat-open-api",
+										"organizations"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Wed, 08 Mar 2023 12:45:20 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "617"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "x-amzn-RequestId",
+									"value": "535d6881-5661-4153-b63d-4849f1981dd3"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "gzip"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=63072000; includeSubdomains; preload"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "content-security-policy",
+									"value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'"
+								},
+								{
+									"key": "x-amz-apigw-id",
+									"value": "Bdl2WG_GjoEF8Hg="
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-Amzn-Trace-Id",
+									"value": "Root=1-6408835b-5cab9ae366d983f8243e1dfc"
+								},
+								{
+									"key": "Access-Control-Allow-Credentials",
+									"value": "true"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": {\n        \"total\": 2,\n        \"results\": [\n            {\n                \"id\": \"a7dcb49d-1f0f-43dc-81dd-68e02335edc9\",\n                \"deletedDate\": null,\n                \"name\": \"Acme Child Org\",\n                \"organizationNumber\": 1752,\n                \"industry\": \"tech\",\n                \"managementAlias\": \"acme.acmechild\",\n                \"organizationType\": \"child\",\n                \"active\": true,\n                \"creditLimit\": 100000000,\n                \"businessType\": {\n                    \"name\": \"Limited Company\",\n                    \"country\": \"Pakistan\"\n                },\n                \"parentOrganizations\": {\n                    \"parentOrganizationId\": \"df35ced3-42a8-4e29-9f03-998772892dff\"\n                }\n            },\n            {\n                \"id\": \"5fbded24-8d4e-4af3-8684-2acd75e322e4\",\n                \"deletedDate\": null,\n                \"name\": \"Acme Child Org 2\",\n                \"organizationNumber\": 1751,\n                \"industry\": \"tech\",\n                \"managementAlias\": \"acme.acmechildtwo\",\n                \"organizationType\": \"child\",\n                \"active\": true,\n                \"creditLimit\": 100000000,\n                \"businessType\": {\n                    \"name\": \"Limited Company\",\n                    \"country\": \"Pakistan\"\n                },\n                \"parentOrganizations\": {\n                    \"parentOrganizationId\": \"df35ced3-42a8-4e29-9f03-998772892dff\"\n                }\n            }\n        ]\n    },\n    \"message\": \"Success\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+						}
+					]
+				},
+				{
+					"name": "Create Sub Organization",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"o\",\n    \"industry\": \"tech\",\n    \"businessTypeId\": \"6d9651c9-3be9-4133-b939-5ff349467862\",\n    \"address\": \"karachi\",\n    \"city\": \"karachi\",\n    \"email\": \"uatopen00089@yopmail.com\",\n    \"phone\": \"971541690125\",\n    \"managementAlias\": \"uatopen00090\",\n    \"creditLimit\": 100000000,\n    \"payrollStartDay\": 2\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}open-api/organizations",
+							"host": [
+								"{{url}}open-api"
+							],
+							"path": [
+								"organizations"
+							]
+						},
+						"description": "## API Overview\n\n• Endpoint: `POST /organizations`  \n• HTTP Method: POST  \n• Authentication: Bearer Token required  \n• Content-Type: `application/json`  \n• Parameter Location: Request Body (JSON)  \n• Purpose: Create a new sub-organization under the authenticated user's parent organization\n\n## Parameter Location\n\n• **Where accepted:** Request Body as JSON\n\n## Request Structure\n\n• **Root object:** JSON with organization details  \n• **Required fields:** Multiple fields are required for organization creation  \n• **Management setup:** Automatically creates admin, support, and operator users  \n• **Bank accounts:** Automatically creates bank accounts for management users\n\n``` json\n{\n  \"name\": \"Acme Corp Subsidiary\",\n  \"industry\": \"Technology\",\n  \"businessTypeId\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"address\": \"123 Business Street\",\n  \"city\": \"Dubai\",\n  \"managementAlias\": \"acme_sub\",\n  \"creditLimit\": 1000000,\n  \"phone\": \"+971501234567\",\n  \"email\": \"admin@acmesub.com\",\n  \"payrollStartDay\" : 2\n}\n\n ```\n\n## Required Fields\n\n### name (string)\n\n• **Required:** Yes  \n• **Purpose:** Organization name  \n• **Format:** Non-empty string  \n• **Validation:** Must not be empty\n\n### industry (string)\n\n• **Required:** Yes  \n• **Purpose:** Industry sector of the organization  \n• **Format:** Non-empty string  \n• **Validation:** Must not be empty\n\n### businessTypeId (string)\n\n• **Required:** Yes  \n• **Purpose:** Business type identifier  \n• **Format:** Valid UUID  \n• **Validation:** Must be valid UUID format and exist in system\n\n### address (string)\n\n• **Required:** Yes  \n• **Purpose:** Organization physical address  \n• **Format:** Non-empty string  \n• **Validation:** Must not be empty\n\n### city (string)\n\n• **Required:** Yes  \n• **Purpose:** City where organization is located  \n• **Format:** Non-empty string  \n• **Validation:** Must not be empty\n\n### managementAlias (string)\n\n• **Required:** Yes  \n• **Purpose:** Unique alias for organization management  \n• **Format:** Lowercase string  \n• **Validation:** Must be lowercase, 4-100 characters long, unique  \n• **Length:** 4-100 characters\n\n### creditLimit (number)\n\n• **Required:** Yes  \n• **Purpose:** Maximum credit limit for the organization  \n• **Format:** Positive number  \n• **Validation:** Must be a valid number\n\n## Optional Fields\n\n### phone (string)\n\n• **Required:** No  \n• **Purpose:** Organization contact phone number  \n• **Format:** Valid phone number for Pakistan (+92)  \n• **Validation:** Must be valid Pakistani phone number format\n\n### email (string)\n\n• **Required:** No  \n• **Purpose:** Organization contact email address  \n• **Format:** Valid email address  \n• **Validation:** Must be valid email format\n\n### payrollStartDay (number)\n\n• Required: No  \n• Purpose: Day of the month when payroll cycle starts for the organization  \n• Format: Integer between 1 and 31  \n• Validation: Must be between 1 and 31  \n• Default: System default (if not provided)  \n• Example: 15 (for mid-month payroll start)\n\n## Response Structures\n\n### Success Response (HTTP 200)\n\n``` json\n{\n  \"message\": \"Organization created successfully\",\n  \"data\": {\n    \"users\": {\n      \"admin\": {\n        \"username\": \"admin@acmesub.com\",\n        \"password\": \"generated_password_123\",\n        \"MFAsecret\": \"JBSWY3DPEHPK3PXP\"\n      },\n      \"operator\": {\n        \"username\": \"ops@acmesub.com\", \n        \"password\": \"generated_password_456\",\n        \"MFAsecret\": \"HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ\"\n      },\n      \"organizationId\": \"880g0611-h51e-74g7-d049-778988772333\"\n    }\n  }\n}\n\n ```\n\n## Error Responses\n\n### Validation Errors\n\n#### Missing Required Field (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Name is required\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```\n\n#### Invalid Business Type ID (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Business type ID must be a valid UUID\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```\n\n#### Invalid Payroll Start Day Format (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Payroll start day must be a number\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```\n\n#### nvalid Payroll Start Day Range (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Payroll start day must be between 1 and 31\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```\n\n## Example Requests\n\n### Basic organization creation\n\n``` json\n{\n  \"name\": \"Tech Solutions Ltd\",\n  \"industry\": \"Information Technology\",\n  \"businessTypeId\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"address\": \"456 Technology Park\",\n  \"city\": \"Abu Dhabi\",\n  \"managementAlias\": \"tech_solutions\",\n  \"creditLimit\": 500000\n}\n\n ```\n\n### Organization with contact details\n\n``` json\n{\n  \"name\": \"Manufacturing Corp\",\n  \"industry\": \"Manufacturing\",\n  \"businessTypeId\": \"770f9600-g40d-63f6-c938-667877661222\",\n  \"address\": \"789 Industrial Zone\",\n  \"city\": \"Sharjah\",\n  \"managementAlias\": \"manufacturing_corp\",\n  \"creditLimit\": 2000000,\n  \"phone\": \"+971507654321\",\n  \"email\": \"contact@manufacturing.com\"\n}\n\n ```\n\n### Minimum required fields\n\n``` json\n{\n  \"name\": \"Simple Business\",\n  \"industry\": \"Retail\",\n  \"businessTypeId\": \"880g0611-h51e-74g7-d049-778988772333\",\n  \"address\": \"321 Retail Street\",\n  \"city\": \"Dubai\",\n  \"managementAlias\": \"simple_biz\",\n  \"creditLimit\": 100000\n}\n\n ```\n\n### With Payroll Start Day\n\n``` json\n{\n  \"name\": \"Simple Business\",\n  \"industry\": \"Retail\",\n  \"businessTypeId\": \"880g0611-h51e-74g7-d049-778988772333\",\n  \"address\": \"321 Retail Street\",\n  \"city\": \"Dubai\",\n  \"managementAlias\": \"simple_biz\",\n  \"creditLimit\": 100000,\n  \"payrollStartDay\": 2\n}\n\n ```"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Acme Child 3\",\n    \"industry\": \"tech\",\n    \"businessTypeId\": \"ab4d503f-bf9f-4a95-aeb3-20817776bc7c\",\n    \"address\": \"Lahore\",\n    \"city\": \"Lahore\",\n    \"email\": \"\",\n    \"phone\": \"\",\n    \"managementAlias\": \"acmechildfour\",\n    \"creditLimit\": 100000000, \n    \"payrollStartDay\": 2\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://api-uat-v2.abhi.ae/uat-open-api/organization",
+									"protocol": "https",
+									"host": [
+										"api-uat-v2",
+										"abhi",
+										"ae"
+									],
+									"path": [
+										"uat-open-api",
+										"organization"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Wed, 08 Mar 2023 12:46:28 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "755"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "x-amzn-RequestId",
+									"value": "1ebbd2d2-f232-4b6d-a464-fe27ea1d6f47"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=63072000; includeSubdomains; preload"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "content-security-policy",
+									"value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'"
+								},
+								{
+									"key": "x-amz-apigw-id",
+									"value": "BdmBbHPfjoEF31Q="
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-Amzn-Trace-Id",
+									"value": "Root=1-640883a2-38bed84f47bb54955ab01b63"
+								},
+								{
+									"key": "Access-Control-Allow-Credentials",
+									"value": "true"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": {\n        \"message\": \"organization created successfully\",\n        \"users\": {\n            \"admin\": {\n                \"email\": \"acme.acmechildfour-admin@abhi.com.pk\",\n                \"password\": \"!1u4#e8r\"\n            },\n            \"operator\": {\n                \"email\": \"acme.acmechildfour-ops@abhi.com.pk\",\n                \"password\": \"c353ep#@\"\n            }\n        }\n    },\n    \"message\": \"Success\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+						}
+					]
+				}
+			],
+			"description": "API reference for Organizations endpoints"
+		},
+		{
+			"name": "Miscellaneous",
+			"item": [
+				{
+					"name": "Get All Banks",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}open-api/banks?limit=100&page=1",
+							"host": [
+								"{{url}}open-api"
+							],
+							"path": [
+								"banks"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "100"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								}
+							]
+						},
+						"description": "## API Overview\n\n• Endpoint: `GET /banks`  \n• HTTP Method: GET  \n• Authentication: Not required  \n• Content-Type: `application/json`  \n• Parameter Location: Query String Parameters  \n• Purpose: Retrieve all available banks in the system with pagination support\n\n## Parameter Location\n\n• **Where accepted:** Query String Parameters\n\n## Request Structure\n\n• **Parameters:** All parameters are optional with system defaults  \n• **Pagination:** Supports limit and page parameters for result pagination  \n• **Filtering:** Supports excluding banks with no data\n\n```\nGET /banks?limit=50&page=1&excludeNone=true\n\n ```\n\n## Optional Fields\n\n### limit (number)\n\n• **Required:** No  \n• **Purpose:** Number of banks to return per page  \n• **Format:** Positive integer  \n• **Validation:** Must be between 1 and 1000  \n• **Default:** System default limit\n\n### page (number)\n\n• **Required:** No  \n• **Purpose:** Page number for pagination  \n• **Format:** Positive integer  \n• **Validation:** Must be 1 or greater  \n• **Default:** 1\n\n### excludeNone (boolean)\n\n• **Required:** No  \n• **Purpose:** Exclude banks with \"None\" values from results  \n• **Format:** Boolean value (true/false)  \n• **Default:** false (includes all banks)\n\n## Response Structures\n\n### Success Response with Banks (HTTP 200)\n\n``` json\n{\n  \"total\": 45,\n  \"results\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"name\": \"Emirates NBD Bank\"\n    },\n    {\n      \"id\": \"770f9600-g40d-63f6-c938-667877661222\",\n      \"name\": \"Abu Dhabi Commercial Bank\"\n    },\n    {\n      \"id\": \"880g0611-h51e-74g7-d049-778988772333\",\n      \"name\": \"First Abu Dhabi Bank\"\n    },\n    {\n      \"id\": \"990h1722-i62f-85h8-e160-889099883444\",\n      \"name\": \"Dubai Islamic Bank\"\n    },\n    {\n      \"id\": \"aa0i2833-j73g-96i9-f271-99a1aa994555\",\n      \"name\": \"Mashreq Bank\"\n    }\n  ]\n}\n\n ```\n\n### Success Response with No Banks (HTTP 200)\n\n``` json\n{\n  \"total\": 0,\n  \"results\": []\n}\n\n ```\n\n## Error Responses\n\n### Validation Errors\n\n#### Invalid Boolean Format (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"excludeNone must be a boolean value\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://api-uat-v2.abhi.ae/uat-open-api/banks?limit=100&page=1",
+									"protocol": "https",
+									"host": [
+										"api-uat-v2",
+										"abhi",
+										"ae"
+									],
+									"path": [
+										"uat-open-api",
+										"banks"
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "100"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Wed, 08 Mar 2023 12:43:59 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "1459"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "x-amzn-RequestId",
+									"value": "5623dd8e-d6c3-49ab-97b2-7d3cc7ebcd44"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "gzip"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=63072000; includeSubdomains; preload"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "content-security-policy",
+									"value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'"
+								},
+								{
+									"key": "x-amz-apigw-id",
+									"value": "BdlphFLSDoEFk2g="
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-Amzn-Trace-Id",
+									"value": "Root=1-64088309-13475acc3449cad0181fd89c"
+								},
+								{
+									"key": "Access-Control-Allow-Credentials",
+									"value": "true"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": {\n        \"total\": 44,\n        \"results\": [\n            {\n                \"id\": \"2017c350-e1e4-423f-9d1c-a7826a1dab66\",\n                \"bankName\": \"Al Baraka Bank Limited\"\n            },\n            {\n                \"id\": \"29071df0-5f3f-4141-bf17-f8e9df862f3d\",\n                \"bankName\": \"Allied Bank Limited\"\n            },\n            {\n                \"id\": \"c9a42ee4-f4c6-4d8c-ac64-1d638d37c730\",\n                \"bankName\": \"Apna Microfinance Bank\"\n            },\n            {\n                \"id\": \"0f479fb3-4bde-47a4-b719-accaec88ca19\",\n                \"bankName\": \"Askari Commercial Bank Limited\"\n            },\n            {\n                \"id\": \"8b6ede88-44d3-4d02-b20f-4dd4314c6d63\",\n                \"bankName\": \"Bank Alfalah Limited\"\n            },\n            {\n                \"id\": \"8c6326a6-420a-44ce-b93b-b0b6251ba9e9\",\n                \"bankName\": \"Bank AL Habib Limited\"\n            },\n            {\n                \"id\": \"9efa288e-d085-4320-8fe4-e71934604f05\",\n                \"bankName\": \"Bank Islami Pakistan Limited\"\n            },\n            {\n                \"id\": \"e9614021-d2f5-4fa1-b084-148dc125b9d8\",\n                \"bankName\": \"Bank of Khyber\"\n            },\n            {\n                \"id\": \"5c2bd95d-b440-48fc-9274-053e660e38df\",\n                \"bankName\": \"Bank of Punjab\"\n            },\n            {\n                \"id\": \"3eca6b8b-9819-4b2e-a5d2-5fe6f47b632e\",\n                \"bankName\": \"Citi Bank\"\n            },\n            {\n                \"id\": \"58ca37d7-9414-43f9-9170-2722f4b2039f\",\n                \"bankName\": \"Dubai Islamic Bank Pakistan Limited\"\n            },\n            {\n                \"id\": \"eccaf78a-a0b2-4a7c-880f-1f0aaf87b869\",\n                \"bankName\": \"EasyPaisa\"\n            },\n            {\n                \"id\": \"554fce39-33a6-4a0c-a3e3-bdd7c1bc98fc\",\n                \"bankName\": \"Faysal Bank\"\n            },\n            {\n                \"id\": \"e9c4543d-e259-4ddf-8665-98533a1bfa3a\",\n                \"bankName\": \"FINCA\"\n            },\n            {\n                \"id\": \"ca1f5c02-7747-49ff-a9d1-4a0887bed598\",\n                \"bankName\": \"Finja\"\n            },\n            {\n                \"id\": \"598ec287-339f-4554-8c9f-a385b06f1f56\",\n                \"bankName\": \"First Microfinance Bank\"\n            },\n            {\n                \"id\": \"b4176d60-b08d-4a06-86eb-825ea703e703\",\n                \"bankName\": \"First Women Bank Limited\"\n            },\n            {\n                \"id\": \"b24750fd-3863-4b71-8c16-d0fc92743d8b\",\n                \"bankName\": \"Habib Bank Limited\"\n            },\n            {\n                \"id\": \"93a13f48-c62e-43a1-91ec-a1294842c044\",\n                \"bankName\": \"Habib Metropolitan Bank Limited\"\n            },\n            {\n                \"id\": \"c0c82d0d-d733-409b-8ce1-2c2d193af03f\",\n                \"bankName\": \"ICBC\"\n            },\n            {\n                \"id\": \"a6f4a22f-8ce0-4fef-9dde-a84713c8194f\",\n                \"bankName\": \"JazzCash\"\n            },\n            {\n                \"id\": \"c5cf99f9-d853-4d1b-8a1f-1afff7c3dd6d\",\n                \"bankName\": \"JS Bank\"\n            },\n            {\n                \"id\": \"7dc03eb8-2c11-47d1-a4a8-932800371ea2\",\n                \"bankName\": \"MCB Bank Limited\"\n            },\n            {\n                \"id\": \"0a0dd418-9ff5-4644-850e-655dcd789596\",\n                \"bankName\": \"MCB Islamic Bank\"\n            },\n            {\n                \"id\": \"2a68fc64-fb0d-4362-b193-e95de222c321\",\n                \"bankName\": \"Meezan Bank Limited\"\n            },\n            {\n                \"id\": \"b9beda1d-604b-4bc1-9449-0c1d24e611c3\",\n                \"bankName\": \"National Bank of Pakistan\"\n            },\n            {\n                \"id\": \"247cbe4a-cab1-49e6-a3ff-1075e916da52\",\n                \"bankName\": \"NRSP Bank\"\n            },\n            {\n                \"id\": \"35df8f19-577d-4017-8a52-30f9ad9ef223\",\n                \"bankName\": \"SAMBA\"\n            },\n            {\n                \"id\": \"1694afcf-832a-4837-993f-42b426c8b1ee\",\n                \"bankName\": \"Silk Bank\"\n            },\n            {\n                \"id\": \"f12ca087-6380-45ed-a2e1-1640c77f2970\",\n                \"bankName\": \"Sindh Bank\"\n            },\n            {\n                \"id\": \"e3f8fe57-f430-4243-9891-56c7dbe0a62e\",\n                \"bankName\": \"Soneri Bank Limited\"\n            },\n            {\n                \"id\": \"c0285d50-26aa-4d4c-95e5-7ab218edc71e\",\n                \"bankName\": \"Standard Chartered\"\n            },\n            {\n                \"id\": \"92b25570-3318-4e9f-bf33-c2dc691f5630\",\n                \"bankName\": \"Summit Bank\"\n            },\n            {\n                \"id\": \"a1cb0fa6-2977-4884-82ec-42e24be5a440\",\n                \"bankName\": \"Ubank\"\n            },\n            {\n                \"id\": \"121ac05e-9f6f-4216-b0cf-70b8e740e5c2\",\n                \"bankName\": \"United Bank Limited\"\n            }\n        ]\n    },\n    \"message\": \"Success\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+						}
+					]
+				},
+				{
+					"name": "Get All Bussines Types",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}open-api/business?limit=50&page=1",
+							"host": [
+								"{{url}}open-api"
+							],
+							"path": [
+								"business"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								}
+							]
+						},
+						"description": "## API Overview\n\n• Endpoint: `GET /business`  \n• HTTP Method: GET  \n• Authentication: Not required  \n• Content-Type: `application/json`  \n• Parameter Location: Query String Parameters  \n• Purpose: Retrieve all available business types in the system with pagination support\n\n## Parameter Location\n\n• **Where accepted:** Query String Parameters\n\n## Request Structure\n\n• **Parameters:** All parameters are optional with system defaults  \n• **Pagination:** Supports limit and offset parameters for result pagination  \n• **No filtering:** Returns all business types available in the system\n\n```\nGET /business?limit=50&offset=0\n\n ```\n\n## Optional Fields\n\n### limit (number)\n\n• **Required:** No  \n• **Purpose:** Number of business types to return per request  \n• **Format:** Positive integer  \n• **Validation:** Must be 10 or greater  \n• **Default:** System default limit\n\n### offset (number)\n\n• **Required:** No  \n• **Purpose:** Number of records to skip before returning results  \n• **Format:** Positive integer  \n• **Validation:** Must be 1 or greater  \n• **Default:** System default offset\n\n## Response Structures\n\n### Success Response with Business Types (HTTP 200)\n\n``` json\n{\n  \"total\": 25,\n  \"results\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"businessName\": \"Software Development\"\n    },\n    {\n      \"id\": \"770f9600-g40d-63f6-c938-667877661222\",\n      \"businessName\": \"Manufacturing\"\n    },\n    {\n      \"id\": \"880g0611-h51e-74g7-d049-778988772333\",\n      \"businessName\": \"Retail Trade\"\n    },\n    {\n      \"id\": \"990h1722-i62f-85h8-e160-889099883444\",\n      \"businessName\": \"Financial Services\"\n    },\n    {\n      \"id\": \"aa0i2833-j73g-96i9-f271-99a1aa994555\",\n      \"businessName\": \"Healthcare Services\"\n    }\n  ]\n}\n\n ```\n\n### Success Response with No Business Types (HTTP 200)\n\n``` json\n{\n  \"total\": 0,\n  \"results\": []\n}\n\n ```\n\n## Error Responses\n\n### Validation Errors\n\n### Server Errors\n\n#### Server Error (HTTP 500)\n\n```json\n{\n  \"data\": {},\n  \"message\": \"Internal server error\",\n  \"status\": \"Internal Server Error\",\n  \"code\": 500\n}\n```"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://api-uat-v2.abhi.ae/uat-open-api/mics/business?limit=100&page=1",
+									"protocol": "https",
+									"host": [
+										"api-uat-v2",
+										"abhi",
+										"ae"
+									],
+									"path": [
+										"uat-open-api",
+										"mics",
+										"business"
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "100"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Wed, 08 Mar 2023 12:44:43 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "815"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "x-amzn-RequestId",
+									"value": "bc12fef5-60c0-453d-b74f-d06b474ef7cb"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=63072000; includeSubdomains; preload"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "content-security-policy",
+									"value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'"
+								},
+								{
+									"key": "x-amz-apigw-id",
+									"value": "BdlwvG0LDoEFgeg="
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-Amzn-Trace-Id",
+									"value": "Root=1-64088337-60aff97a2f7131337bc08594"
+								},
+								{
+									"key": "Access-Control-Allow-Credentials",
+									"value": "true"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": {\n        \"total\": 6,\n        \"results\": [\n            {\n                \"id\": \"efa52d51-081b-44d9-9ce8-253329a17e61\",\n                \"businessName\": \"Partnership Deed\",\n                \"description\": null,\n            },\n            {\n                \"id\": \"b720e7b2-0dfc-4215-bfcf-6540f239cf25\",\n                \"businessName\": \"NGO’s/Club/Trust\",\n                \"description\": null\n            },\n            {\n                \"id\": \"ab4d503f-bf9f-4a95-aeb3-20817776bc7c\",\n                \"businessName\": \"Limited Company\",\n                \"description\": null\n            },\n            {\n                \"id\": \"b407d2a3-f3ca-49da-a8b0-cdeab338dd28\",\n                \"businessName\": \"Partnership Concern\",\n                \"description\": null\n            },\n            {\n                \"id\": \"418ce2e0-59e6-42be-b27d-9ed5eaa3a762\",\n                \"businessName\": \"Proprietorship Concern/Individual (Self-employed)\",\n                \"description\": null\n            },\n            {\n                \"id\": \"6bc427c2-9095-47b3-bcab-e8e9209868ba\",\n                \"businessName\": \"Government / Semi Government (Must go through EnterpriseChannel)\",\n                \"description\": null\n            }\n        ]\n    },\n    \"message\": \"Success\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+						}
+					]
+				}
+			],
+			"description": "Miscellaneous API reference for endpoints"
+		},
+		{
+			"name": "Repayments",
+			"item": [
+				{
+					"name": "Post Repayment",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"amount\": 123,\n    \"clientRepaymentReferenceNumber\": \"123231123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}open-api/user/repayment/:emirateId",
+							"host": [
+								"{{url}}open-api"
+							],
+							"path": [
+								"user",
+								"repayment",
+								":emirateId"
+							],
+							"variable": [
+								{
+									"key": "emirateId",
+									"value": "234234"
+								}
+							]
+						},
+						"description": "**Path Parameter:**\n\n**• emiratesId (string): Emirates ID of the user (for example: 234234).**\n\n**Request Body:**\n\n**•  amount (number) - required: Repayment amount in AED.**\n\n**•  clientRepaymentReferenceNumber (string) – required: Must be unique**"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"amount\": 123,\n    \"clientRepaymentReferenceNumber\": \"123231123\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/dev-open-api/user/repayment/:emirateId",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"dev-open-api",
+										"user",
+										"repayment",
+										":emirateId"
+									],
+									"variable": [
+										{
+											"key": "emirateId",
+											"value": "234234"
+										}
+									]
+								}
+							},
+							"_postman_previewlanguage": "Text",
+							"header": null,
+							"cookie": [],
+							"body": "{ \n    \"data\": {\n        \"repaymentId\": \"39e542ee-ae52-4a57-af31-d97b4b02178c\"\n    }, \n    \"message\": \"Success\", \n    \"status\": \"success\", \n    \"code\": 200 \n} \n"
+						}
+					]
+				},
+				{
+					"name": "Get Outstanding Balance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}open-api/user/repayment-info/:emiratesId",
+							"host": [
+								"{{url}}open-api"
+							],
+							"path": [
+								"user",
+								"repayment-info",
+								":emiratesId"
+							],
+							"variable": [
+								{
+									"key": "emiratesId",
+									"value": ""
+								}
+							]
+						},
+						"description": "## API Overview\n\n• Endpoint: `GET user/repayment-info/{emiratesId}`  \n• HTTP Method: GET  \n• Authentication: Bearer Token required  \n• Content-Type: `application/json`  \n• Parameter Location: URL Path Parameter and Query String Parameters  \n• Purpose: Retrieve outstanding repayment information for a specific employee by Emirates ID\n\n## Parameter Location\n\n• **Where accepted:** URL Path Parameter and Query String Parameters\n\n## Request Structure\n\n• **Path parameter:** Emirates ID embedded in URL path  \n• **Query parameter:** Optional product type filter  \n• **Authentication required:** Bearer token in Authorization header\n\n```\nGET user/repayment-info/1234567890123?type=Salary\n\n ```\n\n## Required Fields\n\n### emiratesId (URL path parameter)\n\n• **Required:** Yes  \n• **Purpose:** Emirates ID of the employee to get repayment information  \n• **Format:** Non-empty string  \n• **Validation:** Must not be empty  \n• **Location:** URL path parameter\n\n### Authentication\n\n• **Bearer Token:** Required in Authorization header  \n• **Format:** `Authorization: Bearer`  \n• **Validation:** Token must be valid and user must have access to the employee data\n\n## Optional Fields\n\n### type (string)\n\n• **Required:** No  \n• **Purpose:** Filter repayment information by product type  \n• **Format:** Enum value from fixed product types  \n• **Valid values:** Salary, Payroll Financing, Payroll Processing, vendorPayment  \n• **Default:** Salary\n\n## Response Structures\n\n### Success Response with Outstanding Amount (HTTP 200)\n\n``` json\n{\n  \"message\": \"Success\",\n  \"data\": {\n    \"outstandingAmount\": {\n      \"totalOutstandingAmount\": 15750.50,\n      \"totalOutstandingPrincipal\": 12500.00,\n      \"totalOutstandingFee\": 3250.50\n    },\n    \"amountInPendingApproval\": 500.12,\n  }\n}\n\n ```\n\n### Success Response with No Outstanding Amount (HTTP 200)\n\n``` json\n{\n  \"message\": \"Success\",\n  \"data\": {\n    \"outstandingAmount\": {\n      \"totalOutstandingAmount\": 0,\n      \"totalOutstandingPrincipal\": 0,\n      \"totalOutstandingFee\": 0\n    },\n    \"amountInPendingApproval\": 0,\n  }\n}\n\n ```\n\n## Error Responses\n\n### Validation Errors\n\n#### Missing Emirates ID (HTTP 400)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Emirates ID is required\",\n  \"status\": \"Bad Request\",\n  \"code\": 400\n}\n\n ```\n\n### Authentication Errors\n\n#### Unauthorized Access (HTTP 401)\n\n``` json\n{\n  \"data\": {},\n  \"message\": \"Unauthorized access\",\n  \"status\": \"Unauthorized\",\n  \"code\": 401\n}\n\n ```"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://api-qa-v2.abhi.ae/qa-open-api/user/repayment-info:/:emiratesId",
+									"protocol": "https",
+									"host": [
+										"api-qa-v2",
+										"abhi",
+										"ae"
+									],
+									"path": [
+										"qa-open-api",
+										"user",
+										"repayment-info:",
+										":emiratesId"
+									],
+									"variable": [
+										{
+											"key": "emiratesId",
+											"value": "3322115"
+										}
+									]
+								}
+							},
+							"_postman_previewlanguage": "Text",
+							"header": [],
+							"cookie": [
+								{
+									"expires": "Invalid Date",
+									"domain": "",
+									"path": ""
+								}
+							],
+							"body": "{\n    \"data\": {\n        \"outstandingAmount\": {\n            \"totalOutstandingAmount\": 0.00,\n            \"totalOutstandingPrincipal\": 0.00,\n            \"totalOutstandingFee\": 0.00,\n            \"lateFees\": 0.00\n        },\n        \"amountInPendingApproval\": 0.00,\n    },\n    \"message\": \"Success\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Login Thirdparty",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var requestBody = JSON.parse(pm.request.body.raw)",
+							"",
+							"pm.test(\"Response body message is equal to 'Success'\", function () {",
+							"    pm.expect(pm.response.json().message).to.equal('Success');",
+							"});",
+							"",
+							"pm.test(\"Response body message should not be null value\", function () {",
+							"    pm.expect(pm.response.json().message).to.not.be.null;",
+							"});",
+							"",
+							"pm.test(\"Check in request post body password should not be null value\", function () {",
+							"    pm.expect(pm.request.body.raw).to.not.include('\"password\":null');",
+							"});",
+							"",
+							"// Verify the length of the Password in login api ",
+							"pm.test(\"Length of the password in request post body should be 6 characters\", function () {",
+							"    var password = JSON.parse(pm.request.body.raw).password;",
+							"    pm.expect(password).to.have.lengthOf(6);",
+							"});",
+							"",
+							"// Verify email format ",
+							"// Verify Email format ",
+							"",
+							"",
+							"",
+							"pm.test(\"Check that the username in the request post body should not be null value\", function () {",
+							"    pm.expect(pm.request.body.raw).to.not.include('\"username\":null');",
+							"});",
+							"",
+							"pm.test(\"Check in request post body username should be in this format ogramuat-ops@abhi.ae\", function () {",
+							"    var username = JSON.parse(pm.request.body.raw).username;",
+							"    pm.expect(username).to.match(/^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$/);",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\"username\": \"lulu.1000555235-admin@abhi.ae\",\n\"password\": \"3@b!4wf2\",\n\"mfa\": \"VWEQSFAXCQV6JYZX6JPYN3Y4I6T4K6XS\",\n\"emiratedId\": \"101234567891205\"\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}open-api/login",
+					"host": [
+						"{{url}}open-api"
+					],
+					"path": [
+						"login"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "Employee Login",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"acme-admin@abhi.com.pk\",\n    \"password\": \"#7r8!w8n\",\n    \"emiratesId\": \"101234567891234\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://api-uat-v2.abhi.ae/uat-open-api/login",
+							"protocol": "https",
+							"host": [
+								"api-uat-v2",
+								"abhi",
+								"ae"
+							],
+							"path": [
+								"uat-open-api",
+								"login"
+							]
+						}
+					},
+					"_postman_previewlanguage": "json",
+					"header": null,
+					"cookie": [],
+					"body": "{\n    \"data\": {\n        \"token\": \"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImU3YmUzMWI3LTM0ZmEtNDExMC1hZGMwLWU0OGM4NjFhYzNjYyIsImluaXRpYXRvciI6ImV4dGVybmFsX3NvdXJjZSIsImFsbG93TXVsdGlsb2dpbiI6ZmFsc2UsImlhdCI6MTY3ODM0MTcwNCwiZXhwIjoxNjc4NDI4MTA0LCJhdWQiOiJhYmhpLmNvbS5wayIsImlzcyI6IkFiaGkgUHZ0LiBMdGQuIiwic3ViIjoiZTdiZTMxYjctMzRmYS00MTEwLWFkYzAtZTQ4Yzg2MWFjM2NjIn0.xKzd4StJCoIVFtJqeXRraxO9lHa15lDavdTv1S8GIGSZ3hEijWbcEJQeOa-ZGuzR_DYgXasDhwrxInBLza3GJg\",\n        \"tokenExpiry\": 1758791400\n    },\n    \"message\": \"Successfully logged in!\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+				},
+				{
+					"name": "Employer Login",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"acme-admin@abhi.com.pk\",\n    \"password\": \"#7r8!w8n\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://api-uat-v2.abhi.ae/uat-open-api/login",
+							"protocol": "https",
+							"host": [
+								"api-uat-v2",
+								"abhi",
+								"ae"
+							],
+							"path": [
+								"uat-open-api",
+								"login"
+							]
+						}
+					},
+					"_postman_previewlanguage": "json",
+					"header": null,
+					"cookie": [],
+					"body": "{\r\n    \"data\": {\r\n        \"token\": \"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImU3YmUzMWI3LTM0ZmEtNDExMC1hZGMwLWU0OGM4NjFhYzNjYyIsImluaXRpYXRvciI6ImV4dGVybmFsX3NvdXJjZSIsImFsbG93TXVsdGlsb2dpbiI6ZmFsc2UsImlhdCI6MTY3ODM0MTcwNCwiZXhwIjoxNjc4NDI4MTA0LCJhdWQiOiJhYmhpLmNvbS5wayIsImlzcyI6IkFiaGkgUHZ0LiBMdGQuIiwic3ViIjoiZTdiZTMxYjctMzRmYS00MTEwLWFkYzAtZTQ4Yzg2MWFjM2NjIn0.xKzd4StJCoIVFtJqeXRraxO9lHa15lDavdTv1S8GIGSZ3hEijWbcEJQeOa-ZGuzR_DYgXasDhwrxInBLza3GJg\",\r\n        \"tokenExpiry\": 1758791400\r\n    },\r\n    \"message\": \"Successfully logged in!\",\r\n    \"status\": \"success\",\r\n    \"code\": 200\r\n}"
+				},
+				{
+					"name": "Login Thirdparty",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"ogramuat-ops@abhi.ae\",\n    \"password\": \"000000\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}open-api/login",
+							"host": [
+								"{{url}}open-api"
+							],
+							"path": [
+								"login"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Date",
+							"value": "Sat, 27 Jan 2024 21:28:28 GMT"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						},
+						{
+							"key": "Content-Length",
+							"value": "818"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						},
+						{
+							"key": "x-amzn-RequestId",
+							"value": "2ca6470a-d675-4e19-b50c-bbaa07c5e446"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "https://api-qa-v2.abhi.ae"
+						},
+						{
+							"key": "x-xss-protection",
+							"value": "1; mode=block"
+						},
+						{
+							"key": "strict-transport-security",
+							"value": "max-age=63072000; includeSubdomains; preload"
+						},
+						{
+							"key": "x-frame-options",
+							"value": "DENY"
+						},
+						{
+							"key": "content-security-policy",
+							"value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'"
+						},
+						{
+							"key": "x-amz-apigw-id",
+							"value": "SN9KIFoLDuEEDrg="
+						},
+						{
+							"key": "x-content-type-options",
+							"value": "nosniff"
+						},
+						{
+							"key": "X-Amzn-Trace-Id",
+							"value": "Root=1-65b57573-5d0c70f07b9a41ba74643acf;Sampled=0;lineage=41e36825:0"
+						},
+						{
+							"key": "Access-Control-Allow-Credentials",
+							"value": "true"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"data\": {\n        \"data\": null,\n        \"token\": \"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImU0Y2JiMjkzLWM3NzQtNDRkNC04Nzc2LTQ1MDYyZjRkN2U5YiIsImluaXRpYXRvciI6ImV4dGVybmFsX3NvdXJjZSIsImFsbG93TXVsdGlsb2dpbiI6ZmFsc2UsImZpbmdlcnByaW50IjoiY2QzMGY3NmNjMzU2MDJlNDFiMjBjYzcwNWU1ZjJmOTEiLCJpYXQiOjE3MDYzOTA5MDYsImV4cCI6MTcwNjQ3NzMwNiwiYXVkIjoiYWJoaS5hZSIsImlzcyI6IkFiaGkgUHZ0LiBMdGQuIiwic3ViIjoiZTRjYmIyOTMtYzc3NC00NGQ0LTg3NzYtNDUwNjJmNGQ3ZTliIn0.h23bZ7UhenQUU7E0WU8f6YZWpjdlB5MzxeK1--SU4hyAHqLV3oh19Fn9IPWMdptsJ4kQ7i0yDwcBuKlM7AGPVIue-4knjS8RK3Qgic6yt-ZYGSWm00H78UPbtiepci9tq3rJkv-ic1sddSLYD2jWvjC8uTQ4o7iCkphbJb6eJDd2UQ6AcsFj6h70X2-p2aGV7iaz5C1Ymz-Cf-PXqvvRDOR6tNrAf66AU5Pl3gh4T30XO8V57tGifcIR2diXF6PMK8RSUCNLC2qlgxjwxJv-kzFt_YHtLxk0Nqrx2-MNXh6rja7-c-6os8Fo-TfMcvnzsKGLfaWNgtazcHpcdnSwog\",\n        \"tokenExpiry\": 1758791400\n    },\n    \"message\": \"Success\",\n    \"status\": \"success\",\n    \"code\": 200\n}"
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

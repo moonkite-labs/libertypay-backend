@@ -17,8 +17,8 @@ This document outlines a comprehensive microservices architecture strategy for i
 9. [Security Architecture](#security-architecture)
 10. [Data Flow Patterns](#data-flow-patterns)
 11. [Implementation Strategy](#implementation-strategy)
-12. [Deployment Architecture](#deployment-architecture)
-13. [Backup & Disaster Recovery](#backup--disaster-recovery)
+12. [Deployment Architecture](#12-deployment-architecture)
+13. [Backup & Disaster Recovery](#13-backup--disaster-recovery)
 14. [Monitoring & Observability](#monitoring--observability)
 15. [Best Practices & Guidelines](#best-practices--guidelines)
 

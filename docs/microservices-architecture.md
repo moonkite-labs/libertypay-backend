@@ -2053,11 +2053,1069 @@ func (s *AbhiGatewayService) buildEmployeeListCacheKey(req *ListEmployeeRequest)
 
 ## Security Architecture
 
-### Authentication & Authorization Flow
+### Keycloak Identity & Access Management
+
+Integrates Keycloak as the enterprise identity provider for centralized authentication, authorization, and user management across all microservices.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                          AUTHENTICATION FLOW                                     │
+│                        KEYCLOAK IDENTITY ARCHITECTURE                           │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────┐ ┌─────────────────────────┐ ┌─────────────────────────┐
+│      CLIENT APPS        │ │     API GATEWAY         │ │    KEYCLOAK SERVER      │
+│                         │ │                         │ │                         │
+│ • Web Dashboard         │ │ • JWT Validation        │ │ • Identity Provider     │
+│ • Mobile Apps           │ │ • Token Introspection   │ │ • User Federation       │
+│ • Third-Party APIs      │ │ • RBAC Enforcement      │ │ • SSO & SAML            │
+│ • Admin Portal          │ │ • Rate Limiting         │ │ • LDAP/AD Integration   │
+│                         │ │ • Request Routing       │ │ • MFA & OTP             │
+│         │               │ │         │               │ │         │               │
+│         ▼               │ │         ▼               │ │         ▼               │
+│ 1. Login Request        │ │ 2. Token Validation     │ │ 3. Token Generation     │
+│ 2. OAuth2/OIDC Flow     │ │ 3. Claims Extraction    │ │ 4. User Authentication  │
+│ 3. JWT Token Handling   │ │ 4. Service Routing      │ │ 5. Role Assignment      │
+└─────────────────────────┘ └─────────────────────────┘ └─────────────────────────┘
+                    │                     │                     │
+                    └─────────────────────┼─────────────────────┘
+                                          │
+                    ┌─────────────────────┼─────────────────────┐
+                    │                     │                     │
+                    ▼                     ▼                     ▼
+┌─────────────────────────┐ ┌─────────────────────────┐ ┌─────────────────────────┐
+│     AUTH SERVICE        │ │   MICROSERVICES         │ │    USER MANAGEMENT      │
+│                         │ │                         │ │                         │
+│ • Token Validation      │ │ • Employee Service      │ │ • Keycloak Admin        │
+│ • User Info Caching     │ │ • Transaction Service   │ │ • User Registration     │
+│ • Role Synchronization  │ │ • Organization Service  │ │ • Profile Management    │
+│ • Session Management    │ │ • Notification Service  │ │ • Password Policies     │
+│ • Audit Logging         │ │                         │ │ • Account Lockout       │
+│         │               │ │         │               │ │         │               │
+│         ▼               │ │         ▼               │ │         ▼               │
+│ ┌─────────────────────┐ │ │ JWT Token Validation    │ │ ┌─────────────────────┐ │
+│ │  POSTGRESQL DB      │ │ │ Claims-Based Access     │ │ │   KEYCLOAK DB       │ │
+│ │                     │ │ │ Role-Based Permissions  │ │ │                     │ │
+│ │ • Session Cache     │ │ │ Service-to-Service Auth │ │ │ • Users & Groups    │ │
+│ │ • User Preferences  │ │ │                         │ │ │ • Roles & Permissions│ │
+│ │ • Audit Logs        │ │ │                         │ │ │ • Client Configs     │ │
+│ └─────────────────────┘ │ │                         │ │ │ • Identity Providers │ │
+└─────────────────────────┘ └─────────────────────────┘ │ │ • Session Store      │ │
+                                                      │ └─────────────────────┘ │
+                                                      └─────────────────────────┘
+```
+
+#### Keycloak Configuration & Deployment
+
+```yaml
+# kubernetes/keycloak/keycloak-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: abhi-system
+  labels:
+    app: keycloak
+    tier: identity
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+      - name: keycloak
+        image: quay.io/keycloak/keycloak:23.0.0
+        args:
+        - start
+        - --hostname-strict-https=false
+        - --hostname-strict=false
+        - --proxy=edge
+        - --http-enabled=true
+        - --import-realm
+        env:
+        - name: KEYCLOAK_ADMIN
+          value: admin
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-admin
+              key: password
+        - name: KC_DB
+          value: postgres
+        - name: KC_DB_URL
+          value: jdbc:postgresql://keycloak-postgres:5432/keycloak
+        - name: KC_DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-db
+              key: username
+        - name: KC_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-db
+              key: password
+        - name: KC_HEALTH_ENABLED
+          value: "true"
+        - name: KC_METRICS_ENABLED
+          value: "true"
+        - name: KC_PROXY
+          value: edge
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        - name: https
+          containerPort: 8443
+          protocol: TCP
+        - name: management
+          containerPort: 9990
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 120
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8080
+          initialDelaySeconds: 30
+          timeoutSeconds: 1
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: keycloak-realm-config
+          mountPath: /opt/keycloak/data/import
+          readOnly: true
+      volumes:
+      - name: keycloak-realm-config
+        configMap:
+          name: keycloak-realm-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-svc
+  namespace: abhi-system
+  labels:
+    app: keycloak
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  - name: https
+    port: 8443
+    targetPort: 8443
+  selector:
+    app: keycloak
+---
+# Keycloak PostgreSQL Database
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak-postgres
+  namespace: abhi-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak-postgres
+  template:
+    metadata:
+      labels:
+        app: keycloak-postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15
+        env:
+        - name: POSTGRES_DB
+          value: keycloak
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-db
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-db
+              key: password
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: keycloak-postgres-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-postgres
+  namespace: abhi-system
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: keycloak-postgres
+```
+
+#### Keycloak Realm Configuration
+
+```json
+{
+  "realm": "abhi-microservices",
+  "enabled": true,
+  "displayName": "Abhi Microservices Platform",
+  "registrationAllowed": false,
+  "registrationEmailAsUsername": true,
+  "rememberMe": true,
+  "verifyEmail": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 30,
+  "accessTokenLifespan": 900,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "offlineSessionIdleTimeout": 2592000,
+  "roles": {
+    "realm": [
+      {
+        "name": "admin",
+        "description": "System Administrator - Full access to all resources"
+      },
+      {
+        "name": "hr_manager",
+        "description": "HR Manager - Employee management and reporting access"
+      },
+      {
+        "name": "finance_manager", 
+        "description": "Finance Manager - Transaction oversight and financial reporting"
+      },
+      {
+        "name": "employee",
+        "description": "Regular Employee - Self-service access to personal data"
+      },
+      {
+        "name": "organization_admin",
+        "description": "Organization Administrator - Manage organization settings"
+      },
+      {
+        "name": "service_account",
+        "description": "Service-to-Service Communication - Internal API access"
+      },
+      {
+        "name": "auditor",
+        "description": "Auditor - Read-only access for compliance and auditing"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "abhi-web-app",
+      "name": "Abhi Web Application",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "redirectUris": ["https://app.abhi.com/*"],
+      "webOrigins": ["https://app.abhi.com"],
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "publicClient": false,
+      "frontchannelLogout": true,
+      "protocol": "openid-connect",
+      "defaultRoles": ["employee"],
+      "optionalClientScopes": ["profile", "email", "roles"],
+      "attributes": {
+        "access.token.lifespan": "900",
+        "client.session.idle.timeout": "1800",
+        "client.session.max.lifespan": "36000"
+      }
+    },
+    {
+      "clientId": "abhi-mobile-app",
+      "name": "Abhi Mobile Application",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["abhiapp://oauth/callback"],
+      "webOrigins": ["*"],
+      "protocol": "openid-connect",
+      "defaultRoles": ["employee"]
+    },
+    {
+      "clientId": "abhi-api-gateway",
+      "name": "API Gateway Service",
+      "enabled": true,
+      "serviceAccountsEnabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocol": "openid-connect",
+      "defaultRoles": ["service_account"],
+      "serviceAccountsEnabled": true
+    },
+    {
+      "clientId": "abhi-admin-cli",
+      "name": "Admin CLI Tool", 
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": false,
+      "protocol": "openid-connect"
+    }
+  ],
+  "identityProviders": [
+    {
+      "alias": "azure-ad",
+      "providerId": "oidc",
+      "enabled": true,
+      "config": {
+        "useJwksUrl": "true",
+        "authorizationUrl": "https://login.microsoftonline.com/tenant-id/oauth2/v2.0/authorize",
+        "tokenUrl": "https://login.microsoftonline.com/tenant-id/oauth2/v2.0/token",
+        "userInfoUrl": "https://graph.microsoft.com/oidc/userinfo",
+        "jwksUrl": "https://login.microsoftonline.com/tenant-id/discovery/v2.0/keys",
+        "issuer": "https://login.microsoftonline.com/tenant-id/v2.0",
+        "clientId": "azure-client-id",
+        "clientSecret": "azure-client-secret",
+        "defaultScope": "openid profile email"
+      }
+    },
+    {
+      "alias": "google",
+      "providerId": "google",
+      "enabled": true,
+      "config": {
+        "clientId": "google-client-id",
+        "clientSecret": "google-client-secret",
+        "defaultScope": "openid profile email"
+      }
+    }
+  ],
+  "userFederationProviders": [
+    {
+      "displayName": "Corporate LDAP",
+      "providerName": "ldap",
+      "priority": 1,
+      "config": {
+        "enabled": ["true"],
+        "vendor": ["ad"],
+        "connectionUrl": ["ldap://corporate-ldap.company.com:389"],
+        "bindDn": ["cn=service-account,ou=service-accounts,dc=company,dc=com"],
+        "bindCredential": ["ldap-service-password"],
+        "usersDn": ["ou=users,dc=company,dc=com"],
+        "usernameLDAPAttribute": ["sAMAccountName"],
+        "rdnLDAPAttribute": ["cn"],
+        "uuidLDAPAttribute": ["objectGUID"],
+        "userObjectClasses": ["person, organizationalPerson, user"],
+        "searchScope": ["2"],
+        "pagination": ["true"]
+      }
+    }
+  ]
+}
+```
+
+#### Auth Service Keycloak Integration
+
+```go
+// auth-service/internal/keycloak/client.go
+package keycloak
+
+import (
+    "context"
+    "encoding/json"
+    "fmt"
+    "net/http"
+    "net/url"
+    "strings"
+    "time"
+
+    "github.com/Nerzal/gocloak/v13"
+    "github.com/golang-jwt/jwt/v5"
+)
+
+type KeycloakClient struct {
+    client       *gocloak.GoCloak
+    clientID     string
+    clientSecret string
+    realm        string
+    serverURL    string
+}
+
+type KeycloakConfig struct {
+    ServerURL    string `json:"server_url" env:"KEYCLOAK_SERVER_URL"`
+    Realm        string `json:"realm" env:"KEYCLOAK_REALM" default:"abhi-microservices"`
+    ClientID     string `json:"client_id" env:"KEYCLOAK_CLIENT_ID"`
+    ClientSecret string `json:"client_secret" env:"KEYCLOAK_CLIENT_SECRET"`
+    AdminUser    string `json:"admin_user" env:"KEYCLOAK_ADMIN_USER"`
+    AdminPass    string `json:"admin_pass" env:"KEYCLOAK_ADMIN_PASS"`
+}
+
+type UserInfo struct {
+    ID                string            `json:"id"`
+    Username          string            `json:"preferred_username"`
+    Email             string            `json:"email"`
+    EmailVerified     bool              `json:"email_verified"`
+    FirstName         string            `json:"given_name"`
+    LastName          string            `json:"family_name"`
+    Roles             []string          `json:"roles"`
+    Groups            []string          `json:"groups"`
+    OrganizationID    string            `json:"organization_id,omitempty"`
+    EmployeeID        string            `json:"employee_id,omitempty"`
+    CustomAttributes  map[string]string `json:"custom_attributes,omitempty"`
+}
+
+func NewKeycloakClient(config *KeycloakConfig) *KeycloakClient {
+    client := gocloak.NewClient(config.ServerURL)
+    
+    return &KeycloakClient{
+        client:       client,
+        clientID:     config.ClientID,
+        clientSecret: config.ClientSecret,
+        realm:        config.Realm,
+        serverURL:    config.ServerURL,
+    }
+}
+
+// Validate JWT token with Keycloak
+func (kc *KeycloakClient) ValidateToken(ctx context.Context, tokenString string) (*UserInfo, error) {
+    // First try to validate token locally using public key
+    token, err := kc.parseToken(tokenString)
+    if err != nil {
+        return nil, fmt.Errorf("failed to parse token: %w", err)
+    }
+
+    // Verify token is still valid with Keycloak (introspection)
+    result, err := kc.client.RetrospectToken(ctx, tokenString, kc.clientID, kc.clientSecret, kc.realm)
+    if err != nil {
+        return nil, fmt.Errorf("token introspection failed: %w", err)
+    }
+
+    if !*result.Active {
+        return nil, fmt.Errorf("token is not active")
+    }
+
+    // Extract user information from token claims
+    userInfo := &UserInfo{}
+    if claims, ok := token.Claims.(jwt.MapClaims); ok {
+        userInfo.ID = getStringClaim(claims, "sub")
+        userInfo.Username = getStringClaim(claims, "preferred_username")
+        userInfo.Email = getStringClaim(claims, "email")
+        userInfo.EmailVerified = getBoolClaim(claims, "email_verified")
+        userInfo.FirstName = getStringClaim(claims, "given_name")
+        userInfo.LastName = getStringClaim(claims, "family_name")
+        
+        // Extract roles from realm_access and resource_access
+        userInfo.Roles = kc.extractRoles(claims)
+        
+        // Extract custom claims
+        userInfo.OrganizationID = getStringClaim(claims, "organization_id")
+        userInfo.EmployeeID = getStringClaim(claims, "employee_id")
+    }
+
+    return userInfo, nil
+}
+
+// Authenticate user and get tokens
+func (kc *KeycloakClient) AuthenticateUser(ctx context.Context, username, password string) (*gocloak.JWT, error) {
+    token, err := kc.client.Login(ctx, kc.clientID, kc.clientSecret, kc.realm, username, password)
+    if err != nil {
+        return nil, fmt.Errorf("authentication failed: %w", err)
+    }
+    
+    return token, nil
+}
+
+// Refresh access token
+func (kc *KeycloakClient) RefreshToken(ctx context.Context, refreshToken string) (*gocloak.JWT, error) {
+    token, err := kc.client.RefreshToken(ctx, refreshToken, kc.clientID, kc.clientSecret, kc.realm)
+    if err != nil {
+        return nil, fmt.Errorf("token refresh failed: %w", err)
+    }
+    
+    return token, nil
+}
+
+// Create user in Keycloak
+func (kc *KeycloakClient) CreateUser(ctx context.Context, adminToken, username, email, firstName, lastName string, roles []string) (string, error) {
+    user := gocloak.User{
+        Username:      &username,
+        Email:         &email,
+        FirstName:     &firstName,
+        LastName:      &lastName,
+        Enabled:       gocloak.BoolP(true),
+        EmailVerified: gocloak.BoolP(false),
+    }
+
+    userID, err := kc.client.CreateUser(ctx, adminToken, kc.realm, user)
+    if err != nil {
+        return "", fmt.Errorf("failed to create user: %w", err)
+    }
+
+    // Assign roles to user
+    for _, roleName := range roles {
+        role, err := kc.client.GetRealmRole(ctx, adminToken, kc.realm, roleName)
+        if err != nil {
+            continue // Skip if role doesn't exist
+        }
+
+        err = kc.client.AddRealmRoleToUser(ctx, adminToken, kc.realm, userID, []gocloak.Role{*role})
+        if err != nil {
+            return userID, fmt.Errorf("failed to assign role %s: %w", roleName, err)
+        }
+    }
+
+    return userID, nil
+}
+
+// Update user attributes (organization_id, employee_id, etc.)
+func (kc *KeycloakClient) UpdateUserAttributes(ctx context.Context, adminToken, userID string, attributes map[string][]string) error {
+    user, err := kc.client.GetUserByID(ctx, adminToken, kc.realm, userID)
+    if err != nil {
+        return fmt.Errorf("failed to get user: %w", err)
+    }
+
+    if user.Attributes == nil {
+        user.Attributes = &map[string][]string{}
+    }
+
+    // Merge new attributes
+    for key, values := range attributes {
+        (*user.Attributes)[key] = values
+    }
+
+    err = kc.client.UpdateUser(ctx, adminToken, kc.realm, *user)
+    if err != nil {
+        return fmt.Errorf("failed to update user attributes: %w", err)
+    }
+
+    return nil
+}
+
+// Logout user (revoke tokens)
+func (kc *KeycloakClient) LogoutUser(ctx context.Context, refreshToken string) error {
+    err := kc.client.Logout(ctx, kc.clientID, kc.clientSecret, kc.realm, refreshToken)
+    if err != nil {
+        return fmt.Errorf("logout failed: %w", err)
+    }
+    
+    return nil
+}
+
+// Get admin token for administrative operations
+func (kc *KeycloakClient) GetAdminToken(ctx context.Context, adminUsername, adminPassword string) (string, error) {
+    token, err := kc.client.LoginAdmin(ctx, adminUsername, adminPassword, "master")
+    if err != nil {
+        return "", fmt.Errorf("admin login failed: %w", err)
+    }
+    
+    return token.AccessToken, nil
+}
+
+// Parse JWT token without verification (for extracting claims)
+func (kc *KeycloakClient) parseToken(tokenString string) (*jwt.Token, error) {
+    token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+        // Get public key from Keycloak JWKS endpoint
+        return kc.getPublicKey(token)
+    })
+    
+    if err != nil {
+        return nil, err
+    }
+    
+    return token, nil
+}
+
+// Get public key from Keycloak JWKS endpoint
+func (kc *KeycloakClient) getPublicKey(token *jwt.Token) (interface{}, error) {
+    // Implementation to fetch and cache public keys from Keycloak JWKS endpoint
+    jwksURL := fmt.Sprintf("%s/realms/%s/protocol/openid-connect/certs", kc.serverURL, kc.realm)
+    
+    // Fetch and parse JWKS
+    resp, err := http.Get(jwksURL)
+    if err != nil {
+        return nil, err
+    }
+    defer resp.Body.Close()
+    
+    // Parse JWKS and return appropriate public key based on token's kid header
+    // This is a simplified version - in production, implement proper JWKS caching
+    return nil, fmt.Errorf("public key validation not implemented")
+}
+
+// Extract roles from token claims
+func (kc *KeycloakClient) extractRoles(claims jwt.MapClaims) []string {
+    var roles []string
+    
+    // Extract realm roles
+    if realmAccess, ok := claims["realm_access"].(map[string]interface{}); ok {
+        if realmRoles, ok := realmAccess["roles"].([]interface{}); ok {
+            for _, role := range realmRoles {
+                if roleStr, ok := role.(string); ok {
+                    roles = append(roles, roleStr)
+                }
+            }
+        }
+    }
+    
+    // Extract resource roles
+    if resourceAccess, ok := claims["resource_access"].(map[string]interface{}); ok {
+        for _, resource := range resourceAccess {
+            if resourceMap, ok := resource.(map[string]interface{}); ok {
+                if resourceRoles, ok := resourceMap["roles"].([]interface{}); ok {
+                    for _, role := range resourceRoles {
+                        if roleStr, ok := role.(string); ok {
+                            roles = append(roles, roleStr)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    return roles
+}
+
+// Helper functions
+func getStringClaim(claims jwt.MapClaims, key string) string {
+    if value, ok := claims[key].(string); ok {
+        return value
+    }
+    return ""
+}
+
+func getBoolClaim(claims jwt.MapClaims, key string) bool {
+    if value, ok := claims[key].(bool); ok {
+        return value
+    }
+    return false
+}
+```
+
+### Enhanced Authentication & Authorization Flow
+
+#### Single Sign-On (SSO) Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              SSO AUTHENTICATION FLOW                            │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+1. User Login Request (OAuth2/OIDC)
+   ├── Client App ─────────────> API Gateway ─────────────> Keycloak Server
+   │   (Login Click)             (Redirect to KC)           (Show Login Page)
+   │                                  │                            │
+   │                                  │                            ▼
+   │                                  │                    Check Existing Session
+   │                                  │                            │
+   │                                  │                    ┌───────┴────────┐
+   │                                  │                    ▼                ▼
+   │                                  │              Session Exists    New Session
+   │                                  │                    │                │
+   │                                  │                    ▼                ▼
+   │                                  │              Auto Login      Show Login Form
+   │                                  │                    │         ┌──────┴─────┐
+   │                                  │                    │         ▼            ▼
+   │                                  │                    │    Local Auth    SSO Provider
+   │                                  │                    │         │        (Azure/Google)
+   │                                  │                    │         │             │
+   │                                  │                    └─────────┼─────────────┘
+   │                                  │                              │
+   │                                  │                              ▼
+   │                                  │                    Generate Access Token
+   │                                  │                    + Refresh Token + ID Token
+   │                                  │                              │
+   │                                  ▼                              │
+   │                           Store Session State                   │
+   │                          (Redis + Auth Service)                 │
+   │                                  │                              │
+   │                                  ◄──────────────────────────────┘
+   │                                  │
+   └────◄─────────────────────────────┘
+      JWT Access Token + User Claims
+
+2. Cross-Application SSO
+   ├── User visits Another App ────> API Gateway ────> Keycloak Check
+   │   (Different Domain)              (Token Missing)      (Session Exists)
+   │                                       │                      │
+   │                                       │                      ▼
+   │                                       │               Silent Token Renewal
+   │                                       │                      │
+   │                                       ▼                      │
+   │                                 Redirect to KC               │
+   │                                 (with prompt=none)           │
+   │                                       │                      │
+   │                                       ◄──────────────────────┘
+   │                                       │
+   └────◄──────────────────────────────────┘
+      New JWT Token (No Login Required)
+
+3. Multi-Factor Authentication (MFA)
+   ├── High-Risk Transaction ─────> API Gateway ────> MFA Required Check
+   │   (Large Amount/Admin)           (Risk Analysis)      (User Profile)
+   │                                       │                      │
+   │                                       │                      ▼
+   │                                       │               Step-Up Auth Request
+   │                                       │                      │
+   │                                       ▼                      │
+   │                                 Redirect to KC               │
+   │                                 (MFA Challenge)              │
+   │                                       │                      │
+   │                                       ◄──────────────────────┘
+   │                                       │
+   └────◄──────────────────────────────────┘
+      Enhanced JWT with MFA Claims
+```
+
+#### Role-Based Access Control (RBAC) Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                            RBAC AUTHORIZATION FLOW                              │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+1. Service Request with JWT
+   ├── Client ────────────────> API Gateway ────────────> Target Service
+   │   (JWT Token + Endpoint)    (Token + Route)          (Business Logic)
+   │                                  │                            │
+   │                                  ▼                            │
+   │                           Extract JWT Claims                  │
+   │                                  │                            │
+   │                                  ▼                            │
+   │                           Validate Token                      │
+   │                           • Signature Check                   │
+   │                           • Expiry Check                      │
+   │                           • Issuer Verification               │
+   │                                  │                            │
+   │                                  ▼                            │
+   │                           Extract User Roles                  │
+   │                           • Realm Roles                       │
+   │                           • Client Roles                      │
+   │                           • Custom Claims                     │
+   │                                  │                            │
+   │                                  ▼                            │
+   │                           Check Permissions                   │
+   │                           ┌─────┴─────┐                      │
+   │                           ▼           ▼                      │
+   │                      Endpoint    Resource                     │
+   │                      Access      Access                      │
+   │                           │           │                      │
+   │                           └─────┬─────┘                      │
+   │                                 │                            │
+   │                                 ▼                            ▼
+   │                         ┌─────────────┐              ┌─────────────┐
+   │                         │ ALLOW       │              │ DENY        │
+   │                         │ - Forward   │              │ - Return    │
+   │                         │ - Log       │              │   403       │
+   │                         │ - Audit     │              │ - Log       │
+   │                         └─────────────┘              └─────────────┘
+   │                                 │                            │
+   └────◄────────────────────────────┼────────────────────────────┘
+      Success Response              Error Response
+
+2. Permission Matrix Example:
+   
+   ROLES vs ENDPOINTS:
+   ┌─────────────────┬────────┬────────┬────────┬────────┬────────┬────────┐
+   │ Endpoint        │ Admin  │ HR Mgr │ Fin Mgr│ Emp    │ Org Ad │ Audit  │
+   ├─────────────────┼────────┼────────┼────────┼────────┼────────┼────────┤
+   │ GET /employees  │   ✓    │   ✓    │   ✗    │   ✗    │   ✓    │   ✓    │
+   │ POST /employees │   ✓    │   ✓    │   ✗    │   ✗    │   ✗    │   ✗    │
+   │ GET /employee/me│   ✓    │   ✓    │   ✓    │   ✓    │   ✓    │   ✗    │
+   │ GET /transactions│   ✓   │   ✗    │   ✓    │   ✗    │   ✗    │   ✓    │
+   │ POST /advance   │   ✓    │   ✗    │   ✗    │   ✓    │   ✗    │   ✗    │
+   │ GET /orgs       │   ✓    │   ✗    │   ✗    │   ✗    │   ✓    │   ✓    │
+   │ POST /orgs      │   ✓    │   ✗    │   ✗    │   ✗    │   ✓    │   ✗    │
+   │ GET /reports    │   ✓    │   ✓    │   ✓    │   ✗    │   ✓    │   ✓    │
+   └─────────────────┴────────┴────────┴────────┴────────┴────────┴────────┘
+```
+
+#### API Gateway Middleware Implementation
+
+```go
+// api-gateway/middleware/keycloak_auth.go
+package middleware
+
+import (
+    "context"
+    "net/http"
+    "strings"
+    "time"
+
+    "github.com/gin-gonic/gin"
+    "auth-service/internal/keycloak"
+)
+
+type KeycloakMiddleware struct {
+    keycloakClient *keycloak.KeycloakClient
+    cache          map[string]*CachedUserInfo
+    rbacPolicy     *RBACPolicy
+}
+
+type CachedUserInfo struct {
+    UserInfo  *keycloak.UserInfo
+    ExpiresAt time.Time
+}
+
+type RBACPolicy struct {
+    Permissions map[string][]string // endpoint -> required roles
+}
+
+func NewKeycloakMiddleware(kcClient *keycloak.KeycloakClient) *KeycloakMiddleware {
+    rbacPolicy := &RBACPolicy{
+        Permissions: map[string][]string{
+            "GET:/api/v1/employees":      {"admin", "hr_manager", "organization_admin", "auditor"},
+            "POST:/api/v1/employees":     {"admin", "hr_manager"},
+            "GET:/api/v1/employee/me":    {"admin", "hr_manager", "finance_manager", "employee", "organization_admin"},
+            "GET:/api/v1/transactions":   {"admin", "finance_manager", "auditor"},
+            "POST:/api/v1/advance":       {"admin", "employee"},
+            "GET:/api/v1/organizations":  {"admin", "organization_admin", "auditor"},
+            "POST:/api/v1/organizations": {"admin", "organization_admin"},
+            "GET:/api/v1/reports":        {"admin", "hr_manager", "finance_manager", "organization_admin", "auditor"},
+        },
+    }
+
+    return &KeycloakMiddleware{
+        keycloakClient: kcClient,
+        cache:          make(map[string]*CachedUserInfo),
+        rbacPolicy:     rbacPolicy,
+    }
+}
+
+func (km *KeycloakMiddleware) AuthenticateAndAuthorize() gin.HandlerFunc {
+    return gin.HandlerFunc(func(c *gin.Context) {
+        // Extract JWT token
+        authHeader := c.GetHeader("Authorization")
+        if authHeader == "" {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing authorization header"})
+            c.Abort()
+            return
+        }
+
+        tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+        if tokenString == authHeader {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format"})
+            c.Abort()
+            return
+        }
+
+        // Check cache first
+        var userInfo *keycloak.UserInfo
+        var err error
+
+        if cached, exists := km.cache[tokenString]; exists && cached.ExpiresAt.After(time.Now()) {
+            userInfo = cached.UserInfo
+        } else {
+            // Validate token with Keycloak
+            userInfo, err = km.keycloakClient.ValidateToken(c.Request.Context(), tokenString)
+            if err != nil {
+                c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token", "details": err.Error()})
+                c.Abort()
+                return
+            }
+
+            // Cache user info for 5 minutes
+            km.cache[tokenString] = &CachedUserInfo{
+                UserInfo:  userInfo,
+                ExpiresAt: time.Now().Add(5 * time.Minute),
+            }
+        }
+
+        // Check authorization
+        endpoint := c.Request.Method + ":" + c.Request.URL.Path
+        if !km.isAuthorized(userInfo, endpoint) {
+            c.JSON(http.StatusForbidden, gin.H{
+                "error": "Insufficient permissions",
+                "required_roles": km.rbacPolicy.Permissions[endpoint],
+                "user_roles": userInfo.Roles,
+            })
+            c.Abort()
+            return
+        }
+
+        // Set user context for downstream services
+        c.Set("user_id", userInfo.ID)
+        c.Set("username", userInfo.Username)
+        c.Set("email", userInfo.Email)
+        c.Set("roles", userInfo.Roles)
+        c.Set("organization_id", userInfo.OrganizationID)
+        c.Set("employee_id", userInfo.EmployeeID)
+
+        c.Next()
+    })
+}
+
+func (km *KeycloakMiddleware) isAuthorized(userInfo *keycloak.UserInfo, endpoint string) bool {
+    requiredRoles, exists := km.rbacPolicy.Permissions[endpoint]
+    if !exists {
+        // If no explicit policy, allow (or you could default to deny)
+        return true
+    }
+
+    // Check if user has any of the required roles
+    for _, userRole := range userInfo.Roles {
+        for _, requiredRole := range requiredRoles {
+            if userRole == requiredRole {
+                return true
+            }
+        }
+    }
+
+    // Special case: users can always access their own data
+    if strings.Contains(endpoint, "/me") && 
+       (contains(userInfo.Roles, "employee") || contains(userInfo.Roles, "admin")) {
+        return true
+    }
+
+    // Organization admins can access their org's data
+    if strings.Contains(endpoint, "/organizations") && 
+       contains(userInfo.Roles, "organization_admin") &&
+       userInfo.OrganizationID != "" {
+        return true
+    }
+
+    return false
+}
+
+func (km *KeycloakMiddleware) RequireRole(role string) gin.HandlerFunc {
+    return gin.HandlerFunc(func(c *gin.Context) {
+        roles, exists := c.Get("roles")
+        if !exists {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "No user context found"})
+            c.Abort()
+            return
+        }
+
+        userRoles, ok := roles.([]string)
+        if !ok {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user roles format"})
+            c.Abort()
+            return
+        }
+
+        if !contains(userRoles, role) {
+            c.JSON(http.StatusForbidden, gin.H{
+                "error": "Insufficient permissions",
+                "required_role": role,
+                "user_roles": userRoles,
+            })
+            c.Abort()
+            return
+        }
+
+        c.Next()
+    })
+}
+
+func (km *KeycloakMiddleware) RequireAnyRole(roles ...string) gin.HandlerFunc {
+    return gin.HandlerFunc(func(c *gin.Context) {
+        userRoles, exists := c.Get("roles")
+        if !exists {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "No user context found"})
+            c.Abort()
+            return
+        }
+
+        userRolesList, ok := userRoles.([]string)
+        if !ok {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user roles format"})
+            c.Abort()
+            return
+        }
+
+        for _, userRole := range userRolesList {
+            if contains(roles, userRole) {
+                c.Next()
+                return
+            }
+        }
+
+        c.JSON(http.StatusForbidden, gin.H{
+            "error": "Insufficient permissions",
+            "required_roles": roles,
+            "user_roles": userRolesList,
+        })
+        c.Abort()
+    })
+}
+
+// Step-up authentication for sensitive operations
+func (km *KeycloakMiddleware) RequireMFA() gin.HandlerFunc {
+    return gin.HandlerFunc(func(c *gin.Context) {
+        // Check if current token has MFA claim
+        authHeader := c.GetHeader("Authorization")
+        tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+        userInfo, err := km.keycloakClient.ValidateToken(c.Request.Context(), tokenString)
+        if err != nil {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Token validation failed"})
+            c.Abort()
+            return
+        }
+
+        // Check for MFA authentication claim in token
+        if mfaAuth, exists := userInfo.CustomAttributes["mfa_authenticated"]; !exists || mfaAuth != "true" {
+            c.JSON(http.StatusForbidden, gin.H{
+                "error": "Multi-factor authentication required",
+                "action": "step_up_auth",
+                "redirect_url": "/auth/mfa",
+            })
+            c.Abort()
+            return
+        }
+
+        c.Next()
+    })
+}
+
+func contains(slice []string, item string) bool {
+    for _, s := range slice {
+        if s == item {
+            return true
+        }
+    }
+    return false
+}
+```
+
+### Standard Authentication Flow
 └─────────────────────────────────────────────────────────────────────────────────┘
 
 1. Client Login Request

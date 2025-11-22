@@ -7,22 +7,26 @@ This document outlines a comprehensive microservices architecture strategy for i
 ## Table of Contents
 
 1. [Architecture Overview](#architecture-overview)
-2. [Service Decomposition](#service-decomposition)
-3. [API Gateway Design](#api-gateway-design)
-4. [RabbitMQ Integration](#rabbitmq-integration)
-5. [Abhi Gateway Service](#abhi-gateway-service)
-6. [Security Architecture](#security-architecture)
-7. [Data Flow Patterns](#data-flow-patterns)
-8. [Implementation Strategy](#implementation-strategy)
-9. [Deployment Architecture](#deployment-architecture)
-10. [Monitoring & Observability](#monitoring--observability)
-11. [Best Practices & Guidelines](#best-practices--guidelines)
+2. [Data Persistence Layer](#data-persistence-layer)
+3. [Caching Strategy](#caching-strategy)
+4. [Service Discovery & Load Balancing](#service-discovery--load-balancing)
+5. [Service Decomposition](#service-decomposition)
+6. [API Gateway Design](#api-gateway-design)
+7. [RabbitMQ Integration](#rabbitmq-integration)
+8. [Abhi Gateway Service](#abhi-gateway-service)
+9. [Security Architecture](#security-architecture)
+10. [Data Flow Patterns](#data-flow-patterns)
+11. [Implementation Strategy](#implementation-strategy)
+12. [Deployment Architecture](#deployment-architecture)
+13. [Backup & Disaster Recovery](#backup--disaster-recovery)
+14. [Monitoring & Observability](#monitoring--observability)
+15. [Best Practices & Guidelines](#best-practices--guidelines)
 
 ---
 
 ## Architecture Overview
 
-### High-Level Architecture Diagram
+### Complete Infrastructure Architecture Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -33,10 +37,16 @@ This document outlines a comprehensive microservices architecture strategy for i
                                           │
                                           ▼
 ┌─────────────────────────────────────────────────────────────────────────────────┐
+│                            LOAD BALANCER (NGINX)                                 │
+│                        • SSL Termination • Health Checks                        │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                                          │
+                                          ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
 │                               API GATEWAY                                        │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                │
-│  │  Authentication │  │  Rate Limiting  │  │  Load Balancer  │                │
-│  │  & Authorization│  │  & Throttling   │  │  & Routing      │                │
+│  │  Authentication │  │  Rate Limiting  │  │  Service        │                │
+│  │  & Authorization│  │  & Throttling   │  │  Discovery      │                │
 │  └─────────────────┘  └─────────────────┘  └─────────────────┘                │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                │
 │  │  Request/Response│  │  Logging &      │  │  Circuit        │                │
@@ -44,15 +54,28 @@ This document outlines a comprehensive microservices architecture strategy for i
 │  └─────────────────┘  └─────────────────┘  └─────────────────┘                │
 └─────────────────────────────────────────────────────────────────────────────────┘
                                           │
-                                          ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              MESSAGE BROKER (RabbitMQ)                          │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                │
-│  │   Work Queues   │  │  Publish/Subscribe │ │  RPC Queues   │                │
-│  │   • Commands    │  │  • Events        │  │  • Sync Calls │                │
-│  │   • Jobs        │  │  • Notifications │  │  • Queries    │                │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘                │
-└─────────────────────────────────────────────────────────────────────────────────┘
+                     ┌────────────────────┼────────────────────┐
+                     │                    │                    │
+                     ▼                    ▼                    ▼
+┌─────────────────────────┐ ┌─────────────────────────┐ ┌─────────────────────────┐
+│     REDIS CLUSTER       │ │    RABBITMQ CLUSTER     │ │   SERVICE DISCOVERY     │
+│                         │ │                         │ │                         │
+│ • Session Storage       │ │  ┌─────────────────┐    │ │ • Kubernetes DNS        │
+│ • API Response Cache    │ │  │   Work Queues   │    │ │ • Health Monitoring     │
+│ • Distributed Locks     │ │  │   • Commands    │    │ │ • Service Registry      │
+│ • Rate Limit Counters   │ │  │   • Jobs        │    │ │ • Load Balancing        │
+│                         │ │  └─────────────────┘    │ │                         │
+│ Master: redis-master    │ │  ┌─────────────────┐    │ └─────────────────────────┘
+│ Slaves: redis-slave-1/2 │ │  │ Pub/Sub Events  │    │
+│                         │ │  │ • Notifications │    │
+└─────────────────────────┘ │  │ • Event Stream  │    │
+                           │  └─────────────────┘    │
+                           │  ┌─────────────────┐    │
+                           │  │   RPC Queues    │    │
+                           │  │   • Sync Calls  │    │
+                           │  │   • Queries     │    │
+                           │  └─────────────────┘    │
+                           └─────────────────────────┘
                                           │
                     ┌─────────────────────┼─────────────────────┐
                     │                     │                     │
@@ -64,7 +87,16 @@ This document outlines a comprehensive microservices architecture strategy for i
 │ • Profile Management    │ │ • Repayment Processing  │ │ • Business Types        │
 │ • Department Handling   │ │ • Balance Calculations  │ │ • Credit Limits         │
 │ • Search & Filtering    │ │ • Transaction History   │ │ • Master Data           │
-│                         │ │ • Validation Logic      │ │ • Hierarchy Management  │
+│ • Bulk Operations       │ │ • Validation Logic      │ │ • Hierarchy Management  │
+│         │               │ │         │               │ │         │               │
+│         ▼               │ │         ▼               │ │         ▼               │
+│ ┌─────────────────────┐ │ │ ┌─────────────────────┐ │ │ ┌─────────────────────┐ │
+│ │  POSTGRESQL DB      │ │ │ │  POSTGRESQL DB      │ │ │ │  POSTGRESQL DB      │ │
+│ │                     │ │ │ │                     │ │ │ │                     │ │
+│ │ • employee_db       │ │ │ │ • transaction_db    │ │ │ │ • organization_db   │ │
+│ │ • Read Replicas     │ │ │ │ • Read Replicas     │ │ │ │ • Read Replicas     │ │
+│ │ • Connection Pool   │ │ │ │ • Connection Pool   │ │ │ │ • Connection Pool   │ │
+│ └─────────────────────┘ │ │ └─────────────────────┘ │ │ └─────────────────────┘ │
 └─────────────────────────┘ └─────────────────────────┘ └─────────────────────────┘
                     │                     │                     │
                     └─────────────────────┼─────────────────────┘
@@ -96,7 +128,38 @@ This document outlines a comprehensive microservices architecture strategy for i
 │ • Session Handling      │ │ • Feature Flags        │ │ • Push Notifications    │
 │ • MFA Support          │ │ • Secret Management     │ │ • Event Broadcasting    │
 │ • User Authorization    │ │ • Service Discovery     │ │ • Template Management   │
-└─────────────────────────┘ └─────────────────────────┘ └─────────────────────────┘
+│         │               │ │ • Vault Integration     │ │ • Audit Logging         │
+│         ▼               │ │                         │ │                         │
+│ ┌─────────────────────┐ │ └─────────────────────────┘ └─────────────────────────┘
+│ │  POSTGRESQL DB      │ │
+│ │                     │ │            MONITORING & OBSERVABILITY
+│ │ • auth_db          │ │ ┌─────────────────────────┐ ┌─────────────────────────┐
+│ │ • Session Store    │ │ │     PROMETHEUS          │ │      ELK STACK          │
+│ │ • User Profiles    │ │ │                         │ │                         │
+│ └─────────────────────┘ │ │ • Metrics Collection    │ │ • Centralized Logging   │
+└─────────────────────────┘ │ • Alerting Rules       │ │ • Log Aggregation       │
+                           │ • Time Series Data      │ │ • Search & Analytics    │
+                           └─────────────────────────┘ └─────────────────────────┘
+                                          │                         │
+                                          ▼                         ▼
+                           ┌─────────────────────────┐ ┌─────────────────────────┐
+                           │       GRAFANA           │ │       KIBANA            │
+                           │                         │ │                         │
+                           │ • Performance Dashboards│ │ • Log Visualization     │
+                           │ • Business Metrics      │ │ • Error Analysis        │
+                           │ • SLA Monitoring        │ │ • Audit Trail Views     │
+                           └─────────────────────────┘ └─────────────────────────┘
+
+                                    BACKUP & DISASTER RECOVERY
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                │
+│  │  PostgreSQL     │  │  Redis          │  │  RabbitMQ       │                │
+│  │  Backup         │  │  Persistence    │  │  Configuration  │                │
+│  │  • WAL Archiving│  │  • RDB Snapshots│  │  • Definition   │                │
+│  │  • Point-in-Time│  │  • AOF Logging  │  │  • Message      │                │
+│  │  • Cross-Region │  │  • Replication  │  │    Durability   │                │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘                │
+└─────────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────┐ ┌─────────────────────────┐ ┌─────────────────────────┐
 │    LOGGING SERVICE      │ │    MONITORING SERVICE   │ │     CACHE SERVICE       │
@@ -106,6 +169,747 @@ This document outlines a comprehensive microservices architecture strategy for i
 │ • Search & Analytics    │ │ • Alerting Rules        │ │ • Distributed Cache     │
 │ • Audit Trail          │ │ • Performance Tracking  │ │ • Rate Limit Storage    │
 └─────────────────────────┘ └─────────────────────────┘ └─────────────────────────┘
+```
+
+---
+
+## Data Persistence Layer
+
+### PostgreSQL Database Strategy
+
+Each microservice follows the **Database-per-Service** pattern with dedicated PostgreSQL instances to ensure data isolation and service autonomy.
+
+#### Database Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                            POSTGRESQL CLUSTER ARCHITECTURE                      │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────┐ ┌─────────────────────────┐ ┌─────────────────────────┐
+│      EMPLOYEE DB        │ │    TRANSACTION DB       │ │   ORGANIZATION DB       │
+│                         │ │                         │ │                         │
+│ Primary: employee-pg-0  │ │ Primary: txn-pg-0       │ │ Primary: org-pg-0       │
+│ Replica: employee-pg-1  │ │ Replica: txn-pg-1       │ │ Replica: org-pg-1       │
+│ Replica: employee-pg-2  │ │ Replica: txn-pg-2       │ │ Replica: org-pg-2       │
+│                         │ │                         │ │                         │
+│ • Employee profiles     │ │ • Transaction records   │ │ • Organization data     │
+│ • Department hierarchy  │ │ • Advance requests      │ │ • Business types        │
+│ • User credentials      │ │ • Repayment schedules   │ │ • Credit limits         │
+│ • Employment history    │ │ • Balance calculations  │ │ • Master data           │
+│ • Salary information    │ │ • Audit logs           │ │ • Compliance records    │
+└─────────────────────────┘ └─────────────────────────┘ └─────────────────────────┘
+
+┌─────────────────────────┐
+│        AUTH DB          │
+│                         │
+│ Primary: auth-pg-0      │
+│ Replica: auth-pg-1      │
+│                         │
+│ • User authentication   │
+│ • Session management    │
+│ • JWT tokens           │
+│ • Role-based access     │
+│ • MFA configurations    │
+└─────────────────────────┘
+```
+
+#### Database Connection Management
+
+```go
+// shared/database/postgres.go
+package database
+
+import (
+    "context"
+    "fmt"
+    "time"
+
+    "github.com/jackc/pgx/v5/pgxpool"
+    "github.com/prometheus/client_golang/prometheus"
+)
+
+type PostgresConfig struct {
+    Host            string        `json:"host" env:"DB_HOST"`
+    Port            int           `json:"port" env:"DB_PORT" default:"5432"`
+    Database        string        `json:"database" env:"DB_NAME"`
+    Username        string        `json:"username" env:"DB_USER"`
+    Password        string        `json:"password" env:"DB_PASSWORD"`
+    SSLMode         string        `json:"ssl_mode" env:"DB_SSL_MODE" default:"require"`
+    MaxConnections  int32         `json:"max_connections" env:"DB_MAX_CONNECTIONS" default:"25"`
+    MinConnections  int32         `json:"min_connections" env:"DB_MIN_CONNECTIONS" default:"5"`
+    ConnMaxLifetime time.Duration `json:"conn_max_lifetime" env:"DB_CONN_MAX_LIFETIME" default:"1h"`
+    ConnMaxIdleTime time.Duration `json:"conn_max_idle_time" env:"DB_CONN_MAX_IDLE_TIME" default:"30m"`
+}
+
+type PostgresManager struct {
+    pool    *pgxpool.Pool
+    config  *PostgresConfig
+    metrics *DatabaseMetrics
+}
+
+func NewPostgresManager(config *PostgresConfig) (*PostgresManager, error) {
+    // Create connection string
+    dsn := fmt.Sprintf(
+        "postgres://%s:%s@%s:%d/%s?sslmode=%s",
+        config.Username, config.Password, config.Host, config.Port,
+        config.Database, config.SSLMode,
+    )
+
+    // Configure connection pool
+    poolConfig, err := pgxpool.ParseConfig(dsn)
+    if err != nil {
+        return nil, fmt.Errorf("failed to parse database config: %w", err)
+    }
+
+    poolConfig.MaxConns = config.MaxConnections
+    poolConfig.MinConns = config.MinConnections
+    poolConfig.MaxConnLifetime = config.ConnMaxLifetime
+    poolConfig.MaxConnIdleTime = config.ConnMaxIdleTime
+
+    // Create connection pool
+    pool, err := pgxpool.NewWithConfig(context.Background(), poolConfig)
+    if err != nil {
+        return nil, fmt.Errorf("failed to create connection pool: %w", err)
+    }
+
+    return &PostgresManager{
+        pool:    pool,
+        config:  config,
+    }, nil
+}
+```
+
+---
+
+## Caching Strategy
+
+### Redis Cluster Architecture
+
+Implements a distributed caching strategy using Redis Cluster for high availability and performance.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              REDIS CLUSTER TOPOLOGY                             │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────┐ ┌─────────────────────────┐ ┌─────────────────────────┐
+│     MASTER NODE 1       │ │     MASTER NODE 2       │ │     MASTER NODE 3       │
+│                         │ │                         │ │                         │
+│ redis-master-1:6379     │ │ redis-master-2:6379     │ │ redis-master-3:6379     │
+│                         │ │                         │ │                         │
+│ Hash Slots: 0-5460      │ │ Hash Slots: 5461-10922  │ │ Hash Slots: 10923-16383 │
+│                         │ │                         │ │                         │
+│ • Session data          │ │ • API response cache    │ │ • Rate limit counters   │
+│ • User preferences      │ │ • Employee data cache   │ │ • Distributed locks     │
+│ • Auth tokens           │ │ • Org data cache        │ │ • Temporary data        │
+│         │               │ │         │               │ │         │               │
+│         ▼               │ │         ▼               │ │         ▼               │
+│ ┌─────────────────────┐ │ │ ┌─────────────────────┐ │ │ ┌─────────────────────┐ │
+│ │   SLAVE NODE 1      │ │ │ │   SLAVE NODE 2      │ │ │ │   SLAVE NODE 3      │ │
+│ │ redis-slave-1:6379  │ │ │ │ redis-slave-2:6379  │ │ │ │ redis-slave-3:6379  │ │
+│ │ (Read Replica)      │ │ │ │ (Read Replica)      │ │ │ │ (Read Replica)      │ │
+│ └─────────────────────┘ │ │ └─────────────────────┘ │ │ └─────────────────────┘ │
+└─────────────────────────┘ └─────────────────────────┘ └─────────────────────────┘
+```
+
+#### Cache Layer Implementation
+
+```go
+// shared/cache/redis.go
+package cache
+
+import (
+    "context"
+    "encoding/json"
+    "fmt"
+    "time"
+
+    "github.com/go-redis/redis/v8"
+    "github.com/prometheus/client_golang/prometheus"
+)
+
+type RedisConfig struct {
+    Addresses    []string      `json:"addresses" env:"REDIS_ADDRESSES"`
+    Password     string        `json:"password" env:"REDIS_PASSWORD"`
+    DB           int           `json:"db" env:"REDIS_DB" default:"0"`
+    PoolSize     int           `json:"pool_size" env:"REDIS_POOL_SIZE" default:"10"`
+    MinIdleConns int           `json:"min_idle_conns" env:"REDIS_MIN_IDLE" default:"5"`
+    DialTimeout  time.Duration `json:"dial_timeout" env:"REDIS_DIAL_TIMEOUT" default:"5s"`
+    ReadTimeout  time.Duration `json:"read_timeout" env:"REDIS_READ_TIMEOUT" default:"3s"`
+    WriteTimeout time.Duration `json:"write_timeout" env:"REDIS_WRITE_TIMEOUT" default:"3s"`
+    DefaultTTL   time.Duration `json:"default_ttl" env:"REDIS_DEFAULT_TTL" default:"1h"`
+}
+
+type CacheManager struct {
+    client  redis.UniversalClient
+    config  *RedisConfig
+    metrics *CacheMetrics
+}
+
+type CacheMetrics struct {
+    HitCount    prometheus.Counter
+    MissCount   prometheus.Counter
+    Operations  prometheus.CounterVec
+    Duration    prometheus.HistogramVec
+}
+
+type CacheOptions struct {
+    TTL        time.Duration
+    Tags       []string
+    Compress   bool
+    Serialize  bool
+}
+
+func NewCacheManager(config *RedisConfig) (*CacheManager, error) {
+    // Configure Redis client options
+    options := &redis.UniversalOptions{
+        Addrs:        config.Addresses,
+        Password:     config.Password,
+        DB:           config.DB,
+        PoolSize:     config.PoolSize,
+        MinIdleConns: config.MinIdleConns,
+        DialTimeout:  config.DialTimeout,
+        ReadTimeout:  config.ReadTimeout,
+        WriteTimeout: config.WriteTimeout,
+    }
+
+    // Create Redis client (supports both standalone and cluster)
+    client := redis.NewUniversalClient(options)
+
+    // Test connection
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
+
+    if err := client.Ping(ctx).Err(); err != nil {
+        return nil, fmt.Errorf("failed to connect to Redis: %w", err)
+    }
+
+    // Initialize metrics
+    metrics := &CacheMetrics{
+        HitCount: prometheus.NewCounter(prometheus.CounterOpts{
+            Name: "cache_hits_total",
+            Help: "Total number of cache hits",
+        }),
+        MissCount: prometheus.NewCounter(prometheus.CounterOpts{
+            Name: "cache_misses_total",
+            Help: "Total number of cache misses",
+        }),
+        Operations: *prometheus.NewCounterVec(prometheus.CounterOpts{
+            Name: "cache_operations_total",
+            Help: "Total number of cache operations",
+        }, []string{"operation", "status"}),
+        Duration: *prometheus.NewHistogramVec(prometheus.HistogramOpts{
+            Name: "cache_operation_duration_seconds",
+            Help: "Cache operation execution time",
+        }, []string{"operation"}),
+    }
+
+    return &CacheManager{
+        client:  client,
+        config:  config,
+        metrics: metrics,
+    }, nil
+}
+
+// Generic cache operations
+func (cm *CacheManager) Set(ctx context.Context, key string, value interface{}, options *CacheOptions) error {
+    start := time.Now()
+    defer func() {
+        cm.metrics.Duration.WithLabelValues("set").Observe(time.Since(start).Seconds())
+    }()
+
+    ttl := cm.config.DefaultTTL
+    if options != nil && options.TTL > 0 {
+        ttl = options.TTL
+    }
+
+    // Serialize value if needed
+    var data string
+    if options != nil && options.Serialize {
+        jsonData, err := json.Marshal(value)
+        if err != nil {
+            cm.metrics.Operations.WithLabelValues("set", "error").Inc()
+            return fmt.Errorf("failed to serialize value: %w", err)
+        }
+        data = string(jsonData)
+    } else {
+        data = fmt.Sprintf("%v", value)
+    }
+
+    // Set value in Redis
+    if err := cm.client.Set(ctx, key, data, ttl).Err(); err != nil {
+        cm.metrics.Operations.WithLabelValues("set", "error").Inc()
+        return fmt.Errorf("failed to set cache value: %w", err)
+    }
+
+    cm.metrics.Operations.WithLabelValues("set", "success").Inc()
+    return nil
+}
+
+func (cm *CacheManager) Get(ctx context.Context, key string, dest interface{}) error {
+    start := time.Now()
+    defer func() {
+        cm.metrics.Duration.WithLabelValues("get").Observe(time.Since(start).Seconds())
+    }()
+
+    // Get value from Redis
+    data, err := cm.client.Get(ctx, key).Result()
+    if err != nil {
+        if err == redis.Nil {
+            cm.metrics.MissCount.Inc()
+            return ErrCacheMiss
+        }
+        cm.metrics.Operations.WithLabelValues("get", "error").Inc()
+        return fmt.Errorf("failed to get cache value: %w", err)
+    }
+
+    cm.metrics.HitCount.Inc()
+    cm.metrics.Operations.WithLabelValues("get", "success").Inc()
+
+    // Deserialize if destination is not a string
+    if dest != nil {
+        if err := json.Unmarshal([]byte(data), dest); err != nil {
+            return fmt.Errorf("failed to deserialize cache value: %w", err)
+        }
+    }
+
+    return nil
+}
+
+func (cm *CacheManager) Delete(ctx context.Context, keys ...string) error {
+    start := time.Now()
+    defer func() {
+        cm.metrics.Duration.WithLabelValues("delete").Observe(time.Since(start).Seconds())
+    }()
+
+    if err := cm.client.Del(ctx, keys...).Err(); err != nil {
+        cm.metrics.Operations.WithLabelValues("delete", "error").Inc()
+        return fmt.Errorf("failed to delete cache keys: %w", err)
+    }
+
+    cm.metrics.Operations.WithLabelValues("delete", "success").Inc()
+    return nil
+}
+
+// Cache invalidation patterns
+func (cm *CacheManager) InvalidateByPattern(ctx context.Context, pattern string) error {
+    start := time.Now()
+    defer func() {
+        cm.metrics.Duration.WithLabelValues("invalidate").Observe(time.Since(start).Seconds())
+    }()
+
+    // Find keys matching pattern
+    keys, err := cm.client.Keys(ctx, pattern).Result()
+    if err != nil {
+        cm.metrics.Operations.WithLabelValues("invalidate", "error").Inc()
+        return fmt.Errorf("failed to find keys by pattern: %w", err)
+    }
+
+    if len(keys) > 0 {
+        if err := cm.client.Del(ctx, keys...).Err(); err != nil {
+            cm.metrics.Operations.WithLabelValues("invalidate", "error").Inc()
+            return fmt.Errorf("failed to delete keys: %w", err)
+        }
+    }
+
+    cm.metrics.Operations.WithLabelValues("invalidate", "success").Inc()
+    return nil
+}
+
+// Distributed locking
+func (cm *CacheManager) AcquireLock(ctx context.Context, key string, expiry time.Duration) (bool, error) {
+    lockKey := fmt.Sprintf("lock:%s", key)
+    acquired, err := cm.client.SetNX(ctx, lockKey, "locked", expiry).Result()
+    if err != nil {
+        return false, fmt.Errorf("failed to acquire lock: %w", err)
+    }
+    return acquired, nil
+}
+
+func (cm *CacheManager) ReleaseLock(ctx context.Context, key string) error {
+    lockKey := fmt.Sprintf("lock:%s", key)
+    return cm.client.Del(ctx, lockKey).Err()
+}
+
+var ErrCacheMiss = fmt.Errorf("cache miss")
+```
+
+#### Cache Strategies by Service
+
+```go
+// employee-service/internal/cache/employee_cache.go
+package cache
+
+import (
+    "context"
+    "fmt"
+    "time"
+
+    "employee-service/internal/models"
+    "shared/cache"
+)
+
+type EmployeeCacheManager struct {
+    cache *cache.CacheManager
+}
+
+func NewEmployeeCacheManager(cacheManager *cache.CacheManager) *EmployeeCacheManager {
+    return &EmployeeCacheManager{
+        cache: cacheManager,
+    }
+}
+
+// Employee profile caching
+func (ecm *EmployeeCacheManager) CacheEmployee(ctx context.Context, employee *models.Employee) error {
+    key := fmt.Sprintf("employee:%s", employee.ID)
+    options := &cache.CacheOptions{
+        TTL:       30 * time.Minute,
+        Serialize: true,
+        Tags:      []string{"employee", "profile"},
+    }
+    return ecm.cache.Set(ctx, key, employee, options)
+}
+
+func (ecm *EmployeeCacheManager) GetEmployee(ctx context.Context, employeeID string) (*models.Employee, error) {
+    key := fmt.Sprintf("employee:%s", employeeID)
+    var employee models.Employee
+    
+    if err := ecm.cache.Get(ctx, key, &employee); err != nil {
+        if err == cache.ErrCacheMiss {
+            return nil, nil // Cache miss, fetch from database
+        }
+        return nil, err
+    }
+    
+    return &employee, nil
+}
+
+// Department hierarchy caching
+func (ecm *EmployeeCacheManager) CacheDepartmentHierarchy(ctx context.Context, orgID string, departments []models.Department) error {
+    key := fmt.Sprintf("departments:org:%s", orgID)
+    options := &cache.CacheOptions{
+        TTL:       1 * time.Hour,
+        Serialize: true,
+        Tags:      []string{"department", "hierarchy"},
+    }
+    return ecm.cache.Set(ctx, key, departments, options)
+}
+
+// Search result caching
+func (ecm *EmployeeCacheManager) CacheSearchResults(ctx context.Context, query string, results []models.Employee) error {
+    key := fmt.Sprintf("search:employees:%x", hashQuery(query))
+    options := &cache.CacheOptions{
+        TTL:       15 * time.Minute,
+        Serialize: true,
+        Tags:      []string{"search", "employee"},
+    }
+    return ecm.cache.Set(ctx, key, results, options)
+}
+
+// Cache invalidation
+func (ecm *EmployeeCacheManager) InvalidateEmployee(ctx context.Context, employeeID string) error {
+    patterns := []string{
+        fmt.Sprintf("employee:%s", employeeID),
+        "search:employees:*",
+        "departments:*",
+    }
+    
+    for _, pattern := range patterns {
+        if err := ecm.cache.InvalidateByPattern(ctx, pattern); err != nil {
+            return err
+        }
+    }
+    
+    return nil
+}
+```
+
+---
+
+## Service Discovery & Load Balancing
+
+### Kubernetes Service Discovery
+
+Leverages Kubernetes native service discovery with DNS-based service resolution and health checking.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                          KUBERNETES SERVICE DISCOVERY                           │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────┐ ┌─────────────────────────┐ ┌─────────────────────────┐
+│      INGRESS NGINX      │ │     API GATEWAY         │ │   SERVICE REGISTRY      │
+│                         │ │                         │ │                         │
+│ • SSL Termination       │ │ • Service Routing       │ │ • Kubernetes DNS        │
+│ • Load Balancing        │ │ • Health Checking       │ │ • Service Endpoints     │
+│ • Rate Limiting         │ │ • Circuit Breaker       │ │ • Pod Discovery         │
+│ • WAF Protection        │ │ • Request Timeout       │ │ • Health Monitoring     │
+│                         │ │                         │ │                         │
+│ External IP: LoadBalancer│ │ Internal Services       │ │ Service: api-gateway    │
+│ Ports: 80, 443          │ │ Port: 8080              │ │ Port: 8080              │
+└─────────────────────────┘ └─────────────────────────┘ └─────────────────────────┘
+                    │                     │                     │
+                    └─────────────────────┼─────────────────────┘
+                                          │
+                    ┌─────────────────────┼─────────────────────┐
+                    │                     │                     │
+                    ▼                     ▼                     ▼
+┌─────────────────────────┐ ┌─────────────────────────┐ ┌─────────────────────────┐
+│   EMPLOYEE SERVICE      │ │  TRANSACTION SERVICE    │ │  ORGANIZATION SERVICE   │
+│                         │ │                         │ │                         │
+│ Service: employee-svc   │ │ Service: transaction-svc│ │ Service: organization-svc│
+│ Port: 8080              │ │ Port: 8080              │ │ Port: 8080              │
+│ Replicas: 3             │ │ Replicas: 3             │ │ Replicas: 2             │
+│                         │ │                         │ │                         │
+│ Pods:                   │ │ Pods:                   │ │ Pods:                   │
+│ • employee-pod-1        │ │ • transaction-pod-1     │ │ • organization-pod-1    │
+│ • employee-pod-2        │ │ • transaction-pod-2     │ │ • organization-pod-2    │
+│ • employee-pod-3        │ │ • transaction-pod-3     │ │                         │
+└─────────────────────────┘ └─────────────────────────┘ └─────────────────────────┘
+                    │                     │                     │
+                    └─────────────────────┼─────────────────────┘
+                                          │
+                                          ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                          ABHI GATEWAY SERVICE                                   │
+│                                                                                 │
+│ Service: abhi-gateway-svc                                                       │
+│ Port: 8080                                                                      │
+│ Replicas: 2                                                                     │
+│                                                                                 │
+│ Pods: abhi-gateway-pod-1, abhi-gateway-pod-2                                   │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Kubernetes Service Configurations
+
+```yaml
+# kubernetes/services/api-gateway-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway-svc
+  namespace: abhi-system
+  labels:
+    app: api-gateway
+    tier: gateway
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+  selector:
+    app: api-gateway
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: employee-svc
+  namespace: abhi-system
+  labels:
+    app: employee-service
+    tier: business
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: grpc
+      port: 9000
+      targetPort: 9000
+      protocol: TCP
+  selector:
+    app: employee-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transaction-svc
+  namespace: abhi-system
+  labels:
+    app: transaction-service
+    tier: business
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: grpc
+      port: 9000
+      targetPort: 9000
+      protocol: TCP
+  selector:
+    app: transaction-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: organization-svc
+  namespace: abhi-system
+  labels:
+    app: organization-service
+    tier: business
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app: organization-service
+```
+
+#### Service Discovery Client
+
+```go
+// shared/discovery/kubernetes.go
+package discovery
+
+import (
+    "context"
+    "fmt"
+    "net"
+    "strings"
+    "time"
+
+    "github.com/prometheus/client_golang/prometheus"
+    "k8s.io/client-go/kubernetes"
+    "k8s.io/client-go/rest"
+)
+
+type KubernetesDiscovery struct {
+    client    kubernetes.Interface
+    namespace string
+    cache     map[string][]string
+    metrics   *DiscoveryMetrics
+}
+
+type DiscoveryMetrics struct {
+    ServiceLookups   prometheus.CounterVec
+    LookupDuration   prometheus.HistogramVec
+    HealthyEndpoints prometheus.GaugeVec
+}
+
+type ServiceInfo struct {
+    Name      string
+    Endpoints []string
+    Port      int
+    Healthy   bool
+}
+
+func NewKubernetesDiscovery(namespace string) (*KubernetesDiscovery, error) {
+    // Create in-cluster config
+    config, err := rest.InClusterConfig()
+    if err != nil {
+        return nil, fmt.Errorf("failed to create Kubernetes config: %w", err)
+    }
+
+    // Create Kubernetes client
+    client, err := kubernetes.NewForConfig(config)
+    if err != nil {
+        return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
+    }
+
+    // Initialize metrics
+    metrics := &DiscoveryMetrics{
+        ServiceLookups: *prometheus.NewCounterVec(prometheus.CounterOpts{
+            Name: "service_discovery_lookups_total",
+            Help: "Total number of service discovery lookups",
+        }, []string{"service", "status"}),
+        LookupDuration: *prometheus.NewHistogramVec(prometheus.HistogramOpts{
+            Name: "service_discovery_lookup_duration_seconds",
+            Help: "Service discovery lookup duration",
+        }, []string{"service"}),
+        HealthyEndpoints: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+            Name: "service_discovery_healthy_endpoints",
+            Help: "Number of healthy service endpoints",
+        }, []string{"service"}),
+    }
+
+    return &KubernetesDiscovery{
+        client:    client,
+        namespace: namespace,
+        cache:     make(map[string][]string),
+        metrics:   metrics,
+    }, nil
+}
+
+func (kd *KubernetesDiscovery) DiscoverService(serviceName string) (*ServiceInfo, error) {
+    start := time.Now()
+    defer func() {
+        kd.metrics.LookupDuration.WithLabelValues(serviceName).Observe(time.Since(start).Seconds())
+    }()
+
+    // Use Kubernetes DNS resolution
+    serviceFQDN := fmt.Sprintf("%s.%s.svc.cluster.local", serviceName, kd.namespace)
+    
+    // Resolve service DNS
+    ips, err := net.LookupIP(serviceFQDN)
+    if err != nil {
+        kd.metrics.ServiceLookups.WithLabelValues(serviceName, "error").Inc()
+        return nil, fmt.Errorf("failed to resolve service %s: %w", serviceName, err)
+    }
+
+    if len(ips) == 0 {
+        kd.metrics.ServiceLookups.WithLabelValues(serviceName, "not_found").Inc()
+        return nil, fmt.Errorf("no endpoints found for service %s", serviceName)
+    }
+
+    // Convert IPs to string endpoints
+    var endpoints []string
+    for _, ip := range ips {
+        endpoints = append(endpoints, ip.String())
+    }
+
+    kd.metrics.ServiceLookups.WithLabelValues(serviceName, "success").Inc()
+    kd.metrics.HealthyEndpoints.WithLabelValues(serviceName).Set(float64(len(endpoints)))
+
+    return &ServiceInfo{
+        Name:      serviceName,
+        Endpoints: endpoints,
+        Port:      8080, // Default port
+        Healthy:   true,
+    }, nil
+}
+
+func (kd *KubernetesDiscovery) GetServiceEndpoint(serviceName string, port int) (string, error) {
+    // Use Kubernetes service DNS directly
+    if port == 0 {
+        port = 8080 // Default port
+    }
+    
+    serviceFQDN := fmt.Sprintf("%s.%s.svc.cluster.local:%d", serviceName, kd.namespace, port)
+    return serviceFQDN, nil
+}
+
+// Health checking
+func (kd *KubernetesDiscovery) CheckServiceHealth(ctx context.Context, serviceName string) (bool, error) {
+    endpoint, err := kd.GetServiceEndpoint(serviceName, 8080)
+    if err != nil {
+        return false, err
+    }
+
+    // Perform basic TCP health check
+    conn, err := net.DialTimeout("tcp", endpoint, 5*time.Second)
+    if err != nil {
+        return false, nil // Service is down, but not an error
+    }
+    conn.Close()
+    
+    return true, nil
+}
 ```
 
 ---
@@ -2222,6 +3026,593 @@ spec:
             port: 8080
           initialDelaySeconds: 30
           periodSeconds: 10
+```
+
+---
+
+## Backup & Disaster Recovery
+
+### Comprehensive Data Protection Strategy
+
+Implements automated backup and disaster recovery procedures for all critical data stores to ensure business continuity.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                        BACKUP & DISASTER RECOVERY ARCHITECTURE                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────┐ ┌─────────────────────────┐ ┌─────────────────────────┐
+│   POSTGRESQL BACKUP     │ │    REDIS PERSISTENCE    │ │   RABBITMQ BACKUP       │
+│                         │ │                         │ │                         │
+│ • WAL Archiving         │ │ • RDB Snapshots         │ │ • Configuration Backup  │
+│ • Point-in-Time Recovery│ │ • AOF Logging           │ │ • Queue Definitions     │
+│ • Continuous Replication│ │ • Master-Slave Sync     │ │ • Message Durability    │
+│ • Cross-Region Backup   │ │ • Automatic Failover    │ │ • Cluster State         │
+│                         │ │                         │ │                         │
+│ Schedule:               │ │ Schedule:               │ │ Schedule:               │
+│ • Full: Daily 02:00 UTC │ │ • RDB: Every 15 min     │ │ • Config: Daily 03:00   │
+│ • Incremental: Hourly   │ │ • AOF: Real-time        │ │ • Messages: Persistent  │
+│ • Retention: 30 days    │ │ • Retention: 7 days     │ │ • Retention: 7 days     │
+└─────────────────────────┘ └─────────────────────────┘ └─────────────────────────┘
+                    │                     │                     │
+                    └─────────────────────┼─────────────────────┘
+                                          │
+                                          ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           BACKUP STORAGE & ORCHESTRATION                       │
+│                                                                                 │
+│ ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                │
+│ │  PRIMARY REGION │  │  BACKUP REGION  │  │ COLD STORAGE    │                │
+│ │                 │  │                 │  │                 │                │
+│ │ • Live replicas │  │ • Hot standby   │  │ • Archive data  │                │
+│ │ • Auto-failover │  │ • Cross-region  │  │ • Cost-effective│                │
+│ │ • <5min RPO     │  │ • <1hr RTO      │  │ • Long-term     │                │
+│ └─────────────────┘  └─────────────────┘  └─────────────────┘                │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                                          │
+                                          ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                            DISASTER RECOVERY PROCEDURES                         │
+│                                                                                 │
+│ 1. Automated Detection    2. Failover Process      3. Data Recovery            │
+│    • Health Monitoring      • Service Redirection    • Point-in-Time Restore   │
+│    • Failure Alerts        • Database Promotion      • Consistency Checks     │
+│    • SLA Breach Detection   • Cache Rebuilding       • Data Validation        │
+│                                                                                 │
+│ 4. Service Restoration    5. Monitoring & Alerts   6. Post-Incident Review    │
+│    • Gradual Traffic        • Recovery Metrics       • Root Cause Analysis    │
+│    • Performance Testing    • SLA Compliance        • Process Improvement     │
+│    • Full Service Recovery  • Audit Logging         • Documentation Update    │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### PostgreSQL Backup Implementation
+
+```go
+// shared/backup/postgres_backup.go
+package backup
+
+import (
+    "context"
+    "fmt"
+    "os/exec"
+    "time"
+
+    "github.com/robfig/cron/v3"
+    "github.com/prometheus/client_golang/prometheus"
+)
+
+type PostgreSQLBackupManager struct {
+    config  *PostgreSQLBackupConfig
+    cron    *cron.Cron
+    metrics *BackupMetrics
+}
+
+type PostgreSQLBackupConfig struct {
+    Host            string        `json:"host"`
+    Port            int           `json:"port"`
+    Database        string        `json:"database"`
+    Username        string        `json:"username"`
+    Password        string        `json:"password"`
+    BackupPath      string        `json:"backup_path"`
+    S3Bucket        string        `json:"s3_bucket"`
+    S3Region        string        `json:"s3_region"`
+    RetentionDays   int           `json:"retention_days" default:"30"`
+    FullBackupCron  string        `json:"full_backup_cron" default:"0 2 * * *"`     // Daily at 2 AM
+    IncrBackupCron  string        `json:"incr_backup_cron" default:"0 * * * *"`      // Hourly
+}
+
+type BackupMetrics struct {
+    BackupDuration prometheus.HistogramVec
+    BackupSize     prometheus.GaugeVec
+    BackupStatus   prometheus.CounterVec
+    LastBackupTime prometheus.GaugeVec
+}
+
+type BackupType string
+
+const (
+    FullBackup        BackupType = "full"
+    IncrementalBackup BackupType = "incremental"
+    WALArchive        BackupType = "wal"
+)
+
+func NewPostgreSQLBackupManager(config *PostgreSQLBackupConfig) *PostgreSQLBackupManager {
+    metrics := &BackupMetrics{
+        BackupDuration: *prometheus.NewHistogramVec(prometheus.HistogramOpts{
+            Name: "postgres_backup_duration_seconds",
+            Help: "PostgreSQL backup execution time",
+        }, []string{"database", "type"}),
+        BackupSize: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+            Name: "postgres_backup_size_bytes",
+            Help: "PostgreSQL backup size in bytes",
+        }, []string{"database", "type"}),
+        BackupStatus: *prometheus.NewCounterVec(prometheus.CounterOpts{
+            Name: "postgres_backup_total",
+            Help: "Total number of PostgreSQL backups",
+        }, []string{"database", "type", "status"}),
+        LastBackupTime: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+            Name: "postgres_last_backup_timestamp",
+            Help: "Timestamp of last successful backup",
+        }, []string{"database", "type"}),
+    }
+
+    return &PostgreSQLBackupManager{
+        config:  config,
+        cron:    cron.New(),
+        metrics: metrics,
+    }
+}
+
+func (pbm *PostgreSQLBackupManager) Start(ctx context.Context) error {
+    // Schedule full backups
+    _, err := pbm.cron.AddFunc(pbm.config.FullBackupCron, func() {
+        if err := pbm.performBackup(ctx, FullBackup); err != nil {
+            pbm.metrics.BackupStatus.WithLabelValues(pbm.config.Database, string(FullBackup), "error").Inc()
+        }
+    })
+    if err != nil {
+        return fmt.Errorf("failed to schedule full backup: %w", err)
+    }
+
+    // Schedule incremental backups (WAL archiving)
+    _, err = pbm.cron.AddFunc(pbm.config.IncrBackupCron, func() {
+        if err := pbm.performWALArchive(ctx); err != nil {
+            pbm.metrics.BackupStatus.WithLabelValues(pbm.config.Database, string(WALArchive), "error").Inc()
+        }
+    })
+    if err != nil {
+        return fmt.Errorf("failed to schedule WAL archive: %w", err)
+    }
+
+    pbm.cron.Start()
+    return nil
+}
+
+func (pbm *PostgreSQLBackupManager) performBackup(ctx context.Context, backupType BackupType) error {
+    start := time.Now()
+    defer func() {
+        pbm.metrics.BackupDuration.WithLabelValues(pbm.config.Database, string(backupType)).Observe(time.Since(start).Seconds())
+    }()
+
+    timestamp := time.Now().Format("20060102_150405")
+    backupFileName := fmt.Sprintf("%s_%s_%s.sql.gz", pbm.config.Database, string(backupType), timestamp)
+    backupPath := fmt.Sprintf("%s/%s", pbm.config.BackupPath, backupFileName)
+
+    // Create pg_dump command
+    cmd := exec.CommandContext(ctx,
+        "pg_dump",
+        "-h", pbm.config.Host,
+        "-p", fmt.Sprintf("%d", pbm.config.Port),
+        "-U", pbm.config.Username,
+        "-d", pbm.config.Database,
+        "-f", backupPath,
+        "--verbose",
+        "--compress=9",
+        "--format=custom",
+    )
+
+    // Set environment variables
+    cmd.Env = append(cmd.Env, fmt.Sprintf("PGPASSWORD=%s", pbm.config.Password))
+
+    // Execute backup
+    output, err := cmd.CombinedOutput()
+    if err != nil {
+        pbm.metrics.BackupStatus.WithLabelValues(pbm.config.Database, string(backupType), "error").Inc()
+        return fmt.Errorf("backup failed: %w, output: %s", err, output)
+    }
+
+    // Upload to S3 if configured
+    if pbm.config.S3Bucket != "" {
+        if err := pbm.uploadToS3(ctx, backupPath, backupFileName); err != nil {
+            return fmt.Errorf("failed to upload backup to S3: %w", err)
+        }
+    }
+
+    // Update metrics
+    pbm.metrics.BackupStatus.WithLabelValues(pbm.config.Database, string(backupType), "success").Inc()
+    pbm.metrics.LastBackupTime.WithLabelValues(pbm.config.Database, string(backupType)).SetToCurrentTime()
+
+    return nil
+}
+
+func (pbm *PostgreSQLBackupManager) performWALArchive(ctx context.Context) error {
+    // WAL archiving is typically configured in postgresql.conf
+    // This function monitors the WAL archive status
+    return nil
+}
+
+func (pbm *PostgreSQLBackupManager) uploadToS3(ctx context.Context, localPath, fileName string) error {
+    // Implement S3 upload logic
+    cmd := exec.CommandContext(ctx,
+        "aws", "s3", "cp",
+        localPath,
+        fmt.Sprintf("s3://%s/postgres-backups/%s", pbm.config.S3Bucket, fileName),
+    )
+    return cmd.Run()
+}
+
+// Point-in-time recovery
+func (pbm *PostgreSQLBackupManager) RestoreFromBackup(ctx context.Context, backupFile string, targetTime time.Time) error {
+    // Implement PITR logic
+    cmd := exec.CommandContext(ctx,
+        "pg_restore",
+        "-h", pbm.config.Host,
+        "-p", fmt.Sprintf("%d", pbm.config.Port),
+        "-U", pbm.config.Username,
+        "-d", pbm.config.Database,
+        "--clean",
+        "--if-exists",
+        backupFile,
+    )
+
+    cmd.Env = append(cmd.Env, fmt.Sprintf("PGPASSWORD=%s", pbm.config.Password))
+    return cmd.Run()
+}
+```
+
+#### Redis Persistence Configuration
+
+```yaml
+# kubernetes/redis/redis-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: abhi-system
+data:
+  redis.conf: |
+    # Persistence configuration
+    save 900 1      # Save if at least 1 key changed in 900 seconds
+    save 300 10     # Save if at least 10 keys changed in 300 seconds
+    save 60 10000   # Save if at least 10000 keys changed in 60 seconds
+    
+    # RDB settings
+    rdbcompression yes
+    rdbchecksum yes
+    dbfilename dump.rdb
+    dir /data
+    
+    # AOF settings
+    appendonly yes
+    appendfilename "appendonly.aof"
+    appendfsync everysec
+    no-appendfsync-on-rewrite no
+    auto-aof-rewrite-percentage 100
+    auto-aof-rewrite-min-size 64mb
+    
+    # Replication settings
+    replica-serve-stale-data yes
+    replica-read-only yes
+    repl-diskless-sync no
+    repl-diskless-sync-delay 5
+    
+    # Security
+    requirepass ${REDIS_PASSWORD}
+    
+    # Memory management
+    maxmemory 1gb
+    maxmemory-policy allkeys-lru
+    
+    # Logging
+    loglevel notice
+    logfile /var/log/redis/redis-server.log
+```
+
+#### Disaster Recovery Automation
+
+```go
+// shared/disaster/recovery_manager.go
+package disaster
+
+import (
+    "context"
+    "fmt"
+    "time"
+
+    "github.com/prometheus/client_golang/prometheus"
+)
+
+type DisasterRecoveryManager struct {
+    config           *DRConfig
+    backupManagers   map[string]BackupManager
+    healthCheckers   map[string]HealthChecker
+    alertManager     AlertManager
+    metrics         *DRMetrics
+}
+
+type DRConfig struct {
+    RPOThreshold        time.Duration `json:"rpo_threshold" default:"5m"`
+    RTOThreshold        time.Duration `json:"rto_threshold" default:"1h"`
+    HealthCheckInterval time.Duration `json:"health_check_interval" default:"30s"`
+    FailoverCooldown    time.Duration `json:"failover_cooldown" default:"10m"`
+    AutoFailover        bool          `json:"auto_failover" default:"false"`
+}
+
+type DRMetrics struct {
+    FailoverEvents    prometheus.Counter
+    RecoveryDuration  prometheus.Histogram
+    DataLoss          prometheus.Gauge
+    SystemAvailability prometheus.Gauge
+}
+
+type FailoverEvent struct {
+    Timestamp     time.Time
+    Service       string
+    FailureReason string
+    RecoveryTime  time.Duration
+    DataLoss      bool
+}
+
+func NewDisasterRecoveryManager(config *DRConfig) *DisasterRecoveryManager {
+    metrics := &DRMetrics{
+        FailoverEvents: prometheus.NewCounter(prometheus.CounterOpts{
+            Name: "disaster_recovery_failover_events_total",
+            Help: "Total number of disaster recovery failover events",
+        }),
+        RecoveryDuration: prometheus.NewHistogram(prometheus.HistogramOpts{
+            Name: "disaster_recovery_duration_seconds",
+            Help: "Time taken for disaster recovery operations",
+        }),
+        DataLoss: prometheus.NewGauge(prometheus.GaugeOpts{
+            Name: "disaster_recovery_data_loss_seconds",
+            Help: "Amount of data loss during recovery in seconds",
+        }),
+        SystemAvailability: prometheus.NewGauge(prometheus.GaugeOpts{
+            Name: "system_availability_percentage",
+            Help: "System availability percentage",
+        }),
+    }
+
+    return &DisasterRecoveryManager{
+        config:          config,
+        backupManagers:  make(map[string]BackupManager),
+        healthCheckers:  make(map[string]HealthChecker),
+        metrics:        metrics,
+    }
+}
+
+func (drm *DisasterRecoveryManager) MonitorAndRespond(ctx context.Context) {
+    ticker := time.NewTicker(drm.config.HealthCheckInterval)
+    defer ticker.Stop()
+
+    for {
+        select {
+        case <-ctx.Done():
+            return
+        case <-ticker.C:
+            drm.performHealthChecks(ctx)
+        }
+    }
+}
+
+func (drm *DisasterRecoveryManager) performHealthChecks(ctx context.Context) {
+    for serviceName, checker := range drm.healthCheckers {
+        healthy, err := checker.CheckHealth(ctx)
+        if err != nil || !healthy {
+            drm.handleServiceFailure(ctx, serviceName, err)
+        }
+    }
+}
+
+func (drm *DisasterRecoveryManager) handleServiceFailure(ctx context.Context, serviceName string, err error) {
+    start := time.Now()
+    
+    if drm.config.AutoFailover {
+        if err := drm.performFailover(ctx, serviceName); err != nil {
+            drm.alertManager.SendCriticalAlert(fmt.Sprintf("Automatic failover failed for %s: %v", serviceName, err))
+        }
+    } else {
+        drm.alertManager.SendAlert(fmt.Sprintf("Service %s is unhealthy: %v", serviceName, err))
+    }
+    
+    drm.metrics.FailoverEvents.Inc()
+    drm.metrics.RecoveryDuration.Observe(time.Since(start).Seconds())
+}
+
+func (drm *DisasterRecoveryManager) performFailover(ctx context.Context, serviceName string) error {
+    // Implement service-specific failover logic
+    switch serviceName {
+    case "postgres":
+        return drm.failoverPostgres(ctx)
+    case "redis":
+        return drm.failoverRedis(ctx)
+    case "rabbitmq":
+        return drm.failoverRabbitMQ(ctx)
+    default:
+        return fmt.Errorf("unknown service: %s", serviceName)
+    }
+}
+
+func (drm *DisasterRecoveryManager) failoverPostgres(ctx context.Context) error {
+    // 1. Promote standby to primary
+    // 2. Update service endpoints
+    // 3. Verify data consistency
+    // 4. Update monitoring targets
+    return nil
+}
+
+func (drm *DisasterRecoveryManager) failoverRedis(ctx context.Context) error {
+    // 1. Promote Redis slave to master
+    // 2. Reconfigure sentinel
+    // 3. Update application connections
+    return nil
+}
+
+func (drm *DisasterRecoveryManager) failoverRabbitMQ(ctx context.Context) error {
+    // 1. Promote backup node
+    // 2. Restore queue definitions
+    // 3. Verify cluster health
+    return nil
+}
+
+// Recovery procedures
+func (drm *DisasterRecoveryManager) ExecuteRecoveryPlan(ctx context.Context, plan RecoveryPlan) error {
+    start := time.Now()
+    defer func() {
+        drm.metrics.RecoveryDuration.Observe(time.Since(start).Seconds())
+    }()
+
+    for _, step := range plan.Steps {
+        if err := drm.executeRecoveryStep(ctx, step); err != nil {
+            return fmt.Errorf("recovery step failed: %w", err)
+        }
+    }
+
+    return nil
+}
+
+type RecoveryPlan struct {
+    Name        string
+    Description string
+    Steps       []RecoveryStep
+}
+
+type RecoveryStep struct {
+    Name        string
+    Description string
+    Action      func(context.Context) error
+    Timeout     time.Duration
+    Retries     int
+}
+
+func (drm *DisasterRecoveryManager) executeRecoveryStep(ctx context.Context, step RecoveryStep) error {
+    ctx, cancel := context.WithTimeout(ctx, step.Timeout)
+    defer cancel()
+
+    var err error
+    for i := 0; i <= step.Retries; i++ {
+        if err = step.Action(ctx); err == nil {
+            return nil
+        }
+        if i < step.Retries {
+            time.Sleep(time.Second * time.Duration(i+1)) // Exponential backoff
+        }
+    }
+    return err
+}
+```
+
+#### Backup Validation & Testing
+
+```yaml
+# kubernetes/cronjobs/backup-validation.yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-validation
+  namespace: abhi-system
+spec:
+  schedule: "0 4 * * *"  # Daily at 4 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup-validator
+            image: postgres:15
+            command:
+            - /bin/bash
+            - -c
+            - |
+              # Download latest backup
+              aws s3 cp s3://${S3_BUCKET}/postgres-backups/$(aws s3 ls s3://${S3_BUCKET}/postgres-backups/ | sort | tail -n 1 | awk '{print $4}') /tmp/latest_backup.sql
+              
+              # Create test database
+              createdb -h ${TEST_DB_HOST} -U ${DB_USER} backup_test_$(date +%Y%m%d)
+              
+              # Restore backup to test database
+              pg_restore -h ${TEST_DB_HOST} -U ${DB_USER} -d backup_test_$(date +%Y%m%d) /tmp/latest_backup.sql
+              
+              # Run validation queries
+              psql -h ${TEST_DB_HOST} -U ${DB_USER} -d backup_test_$(date +%Y%m%d) -c "
+                SELECT 
+                  (SELECT COUNT(*) FROM employees) as employee_count,
+                  (SELECT COUNT(*) FROM transactions) as transaction_count,
+                  (SELECT COUNT(*) FROM organizations) as org_count;
+              "
+              
+              # Cleanup test database
+              dropdb -h ${TEST_DB_HOST} -U ${DB_USER} backup_test_$(date +%Y%m%d)
+              
+              echo "Backup validation completed successfully"
+            env:
+            - name: S3_BUCKET
+              value: "abhi-backups"
+            - name: TEST_DB_HOST
+              value: "postgres-test-cluster"
+            - name: DB_USER
+              value: "postgres"
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
+          restartPolicy: OnFailure
+```
+
+#### Recovery Time & Point Objectives (RTO/RPO)
+
+```yaml
+# Service Level Objectives for Disaster Recovery
+SLA_TARGETS:
+  RTO: # Recovery Time Objective
+    Critical_Services:
+      - service: "API Gateway"
+        target: "< 5 minutes"
+        method: "Auto-failover with health checks"
+      
+      - service: "PostgreSQL Primary"
+        target: "< 15 minutes" 
+        method: "Automatic promotion of standby replica"
+      
+      - service: "Redis Cluster"
+        target: "< 2 minutes"
+        method: "Redis Sentinel failover"
+    
+    Business_Services:
+      - service: "Employee Service"
+        target: "< 10 minutes"
+        method: "Kubernetes auto-restart + circuit breaker"
+        
+      - service: "Transaction Service"
+        target: "< 10 minutes"
+        method: "Kubernetes auto-restart + circuit breaker"
+
+  RPO: # Recovery Point Objective  
+    Databases:
+      - service: "PostgreSQL"
+        target: "< 5 minutes"
+        method: "Streaming replication + WAL archiving"
+        
+      - service: "Redis"
+        target: "< 1 minute" 
+        method: "AOF + replication"
+        
+    Message_Queues:
+      - service: "RabbitMQ"
+        target: "< 30 seconds"
+        method: "Persistent messages + cluster replication"
 ```
 
 ---
